@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "application"
+name = "clustering"
 version = "0.2.1"
 description = "Python Poetry package with basic CI/CD using GitHub actions"
 authors = ["Laurence Rawlings <contact@laurencerawlings.com>"]
@@ -32,7 +32,7 @@ exclude = '''
 '''
 
 [tool.poetry.scripts]
-application = "application:main"
+clustering = "clustering:main"
 
 [tool.commitizen]
 version = "0.2.1"
