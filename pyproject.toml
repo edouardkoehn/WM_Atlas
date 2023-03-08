@@ -32,7 +32,7 @@ exclude = '''
 '''
 
 [tool.poetry.scripts]
-clustering = "clustering:main"
+spectral_clustering = "clustering:spectral_clustering"
 
 [tool.commitizen]
 version = "0.2.1"

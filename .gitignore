@@ -23,13 +23,14 @@ lib/
 lib64/
 parts/
 sdist/
-var/
+var
 wheels/
 share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
 MANIFEST
+.lock
 
 
 # PyInstaller
