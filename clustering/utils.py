@@ -37,6 +37,11 @@ def get_A(patient_id: int) -> sparse:
     return load_data(patient_id)["G"]["A"]
 
 
-def get_WM_ind(patient_id: int) -> np.ndarray:
+def get_ind(patient_id: int) -> np.array:
+    """Method to extract the indices"""
+    return np.asarray(load_data(patient_id)["G"]["indices"], dtype=int)
+
+
+def get_WM_ind(patient_id: int) -> np.array:
     """Method to extract the WM indices"""
-    return load_data(patient_id)["G"]["indices_wm"]
+    return np.asarray(load_data(patient_id)["G"]["indices_wm"], dtype=int)
