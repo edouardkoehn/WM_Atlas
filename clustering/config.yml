@@ -1,0 +1,6 @@
+
+output_dir: "" #Path to the output dir
+#Path to the .mat file
+general_path: "/media/miplab-nas2/Data3/Hamid/HCP100_miplabgolgi"
+dir_path: "/cerebrum_res1250_spaceDiffusion_neighb5+3_pow1_fibs5_rempar1_sh8_th90_beta50_mag0_soliangshAverageuniform_gmEdgeWeightVers1/"
+file_path: "/T1w/graph/cerebrum_res1250_spaceDiffusion_neighb5+3_pow1_fibs5_rempar1_sh8_th90_beta50_mag0_soliangshAverageuniform_gmEdgeWeightVers1/G.cerebrum.res1250.spaceDiffusion.neighb5+3.pow1.fibs5.rempar1.sh8.th90.beta50.mag0.soliangshAverageuniform.gmEdgeWeightVers1.mat"
