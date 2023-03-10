@@ -53,6 +53,12 @@ def compute_L(A: sparse, D: sparse) -> sparse:
     return D - A
 
 
+def compute_Lrw(A: sparse, D: sparse) -> sparse:
+    D_inv = sparse.linalg.inv(D)
+    L = compute_L(A, D)
+    return D_inv - L
+
+
 def compute_eigenvalues(L: sparse, k: int) -> sparse:
     """Compute the eigenvalues and eigenvecotrs of L"""
     eig_values, eig_vectors = sparse.linalg.eigs(L, k)
