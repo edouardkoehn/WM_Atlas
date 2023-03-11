@@ -3,11 +3,12 @@ import yaml
 import os
 import numpy as np
 import scipy.sparse as sparse
+from pathlib import Path
 
 
 def get_root():
     """Methods for getting the root of the repo"""
-    return os.getcwd()
+    return str(Path(__file__).resolve().parent.parent)
 
 
 def get_config() -> dict:

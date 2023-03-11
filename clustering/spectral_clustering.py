@@ -24,6 +24,4 @@ def clustering(patient_id, methods, thresold, k):
     V = kmeans.whiten(V)
     codebook, _ = kmeans.kmean(V, k)
     code = kmeans.vq(V, codebook)
-
-
-return
+    return

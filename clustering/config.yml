@@ -1,4 +1,5 @@
 
+root_dir: "/media/miplab-nas2/Code/Hamid_Edouard/WM_Atlas" #Path to the root of the directory
 output_dir: "" #Path to the output dir
 #Path to the .mat file
 general_path: "/media/miplab-nas2/Data3/Hamid/HCP100_miplabgolgi"

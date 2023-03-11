@@ -18,7 +18,7 @@ def plot_connections_distribution(A: sparse, matrix_name=""):
 def plot_nodes_eigen(v: sparse, matrix_name=""):
     fig, ax = plt.subplots(figsize=(7, 5))
     ax.scatter(np.arange(0, len(v)), v)
-    ax.set_title(f"Number of connection per nodes :{matrix_name}")
+    ax.set_title(f"Eigen Values :{matrix_name}")
     ax.set_ylabel("Eigen values")
     ax.set_xlabel("k")
     ax.grid()
