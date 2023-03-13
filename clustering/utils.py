@@ -1,9 +1,10 @@
-import mat73
-import yaml
 import os
+from pathlib import Path
+
+import mat73
 import numpy as np
 import scipy.sparse as sparse
-from pathlib import Path
+import yaml
 
 
 def get_root():
@@ -20,6 +21,11 @@ def get_config() -> dict:
         except yaml.YAMLError as exc:
             print(exc)
     return config
+
+
+def get_output_dir() -> str:
+    """Method for returning the output_dir"""
+    return get_config()["output_dir"]
 
 
 def load_data(patient_id: int) -> dict:

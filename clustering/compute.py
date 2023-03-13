@@ -1,7 +1,9 @@
+import networkx as nx
 import numpy as np
 import scipy.sparse as sparse
+from sklearn import utils as sk
+
 import clustering.utils as utils
-import networkx as nx
 
 
 def remove_ind(A: sparse, ind_real: np.array, ind: np.array) -> (sparse, list):
@@ -58,14 +60,15 @@ def compute_L(A: sparse, D: sparse, ind: list) -> (sparse, list):
 
 def compute_Lrw(A: sparse, D: sparse, ind: list) -> (sparse, list):
     D_inv = sparse.linalg.inv(D)
-    L = compute_L(A, D)
+    print("done")
+    L, ind = compute_L(A, D, ind)
     return D_inv - L, ind
 
 
 def compute_eigenvalues(L: sparse, k: int, ind: list) -> (np.array, np.ndarray, list):
     """Compute the eigenvalues and eigenvecotrs of L"""
     eig_values, eig_vectors = sparse.linalg.eigs(L, k)
-    return eig_values, eig_vectors, list
+    return eig_values, eig_vectors, ind
 
 
 def is_connected(A: sparse) -> bool:
@@ -76,3 +79,11 @@ def is_connected(A: sparse) -> bool:
         return True
     else:
         return False
+
+
+def is_symetric(A: sparse) -> bool:
+    try:
+        sk.validation.check_symmetric(A)
+    except:
+        return False
+    return True
