@@ -1,5 +1,9 @@
+import logging
+
 import networkx as nx
+import nibabel as nib
 import numpy as np
+import pandas as pd
 import scipy.sparse as sparse
 from sklearn import utils as sk
 
@@ -53,22 +57,28 @@ def compute_D(A: sparse, ind: list) -> (sparse, list):
     return D.tocsc(), ind
 
 
-def compute_L(A: sparse, D: sparse, ind: list) -> (sparse, list):
+def compute_L(A: sparse, ind: list) -> (sparse, list):
     """Compute the Laplacien"""
+    D, _ = compute_D(A, ind)
     return D - A, ind
 
 
-def compute_Lrw(A: sparse, D: sparse, ind: list) -> (sparse, list):
-    D_inv = sparse.linalg.inv(D)
-    print("done")
-    L, ind = compute_L(A, D, ind)
-    return D_inv - L, ind
+def compute_Lrw(A: sparse, ind: list) -> (sparse, list):
+    logging.info(f"Starting to compute Lrw:")
+    D_inv, _ = compute_D(A, ind)
+    D_inv = sparse.linalg.inv(D_inv)
+    logging.info(f"Finished to compute Lrw: {D_inv.shape, type(D_inv)}")
+    L, _ = compute_L(A, ind)
+    return D_inv * L, ind
 
 
 def compute_eigenvalues(L: sparse, k: int, ind: list) -> (np.array, np.ndarray, list):
     """Compute the eigenvalues and eigenvecotrs of L"""
-    eig_values, eig_vectors = sparse.linalg.eigs(L, k)
-    return eig_values, eig_vectors, ind
+    logging.info(f"Starting to compute Eigen:")
+    eig_values, eigen_vector = sparse.linalg.eigs(L, k=k, tol=5e-3, which="SM")
+    logging.info(f"finieshed to compute eigen")
+
+    return eig_values, eigen_vector, ind
 
 
 def is_connected(A: sparse) -> bool:
@@ -87,3 +97,41 @@ def is_symetric(A: sparse) -> bool:
     except:
         return False
     return True
+
+
+def compute_nift(
+    f_src_nifti_path: str,
+    cluster_output_path: str,
+    N_cluster: int,
+    output_path: str,
+    indices_raw: np.array,
+):
+
+    # load the nifti file
+    h = nib.load(f_src_nifti_path)
+    h.header[
+        "descrip"
+    ] = "Nifti files containing the cluster generated with spectral clustering (MIPLAB)"
+    v = h.header["dim"][1:4]
+    nifti_values = h.get_fdata()
+
+    # load the cluster
+    clusters = pd.read_csv(cluster_output_path)
+    coord = np.zeros((clusters.shape[0], 3), dtype=int)
+    for i in range(0, len(coord)):
+        coord[i] = np.unravel_index(clusters["index"][i], (v[0], v[1], v[2]), order="F")
+    clusters["x"] = coord[:, 0]
+    clusters["y"] = coord[:, 1]
+    clusters["z"] = coord[:, 2]
+
+    clusters.C = clusters.C + 1
+    # assigne the clusters
+    nifti_values[clusters.x, clusters.y, clusters.z] = clusters.C
+    # export the results
+    output = nib.Nifti1Image(nifti_values, None, header=h.header.copy())
+    nib.save(output, output_path)
+
+    test = nib.load(output_path)
+    print(test.get_fdata()[clusters.x[0], clusters.y[0], clusters.z[0]])
+    print([clusters.x[0], clusters.y[0], clusters.z[0]])
+    return
