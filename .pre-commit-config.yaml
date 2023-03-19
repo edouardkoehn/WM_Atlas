@@ -7,6 +7,7 @@ repos:
     -   id: trailing-whitespace
     -   id: check-merge-conflict
     -   id: check-toml
+    -   id: check-yaml
     -   id: mixed-line-ending
     -   id: check-ast
     -   id: check-added-large-files
@@ -19,6 +20,10 @@ repos:
     hooks:
     -   id: commitizen
         stages: [commit-msg]
+-   repo: https://github.com/pycqa/flake8
+    rev: 6.0.0
+    hooks:
+    -   id: flake8
 -   repo: https://github.com/pre-commit/mirrors-isort
     rev: v5.4.2
     hooks:

@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
-import scipy.sparse as sparse
 import numpy as np
+import scipy.sparse as sparse
 
 
 def plot_connections_distribution(A: sparse, matrix_name=""):
