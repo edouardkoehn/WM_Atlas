@@ -19,9 +19,14 @@ conda activate wm
 ```bash
 pip install poetry
 ```
-- install the modul
+- install the module
 ```bash
 poetry install
 poetry run pre-commit install
 poetry env info
 ```
+- test the installation process
+```bash
+poetry run pytest
+```
+## Spectral clustering
