@@ -90,6 +90,3 @@ def get_ind(patient_id: int) -> np.array:
 def get_WM_ind(patient_id: int) -> np.array:
     """Method to extract the WM indices"""
     return np.asarray(load_data(patient_id)["G"]["indices_wm"], dtype=int)
-
-
-print(get_root())

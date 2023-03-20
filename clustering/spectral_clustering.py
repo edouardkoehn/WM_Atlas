@@ -25,7 +25,8 @@ import clustering.utils as utils
     "--threshold",
     type=float,
     required=False,
-    help="""Thresholding values for the binarisation of A""",
+    help="""Thresholding values for the binarisation of A. If not specified,
+    no thresholding would be applied""",
 )
 @click.option(
     "-k",
@@ -74,7 +75,6 @@ def spectral_clustering(
         k_eigen,
         save,
     )
-
     # load the data
     A = utils.get_A(patient_id)
 
@@ -91,7 +91,6 @@ def spectral_clustering(
         L, ind = compute.compute_Lrw(A_wm, ind, path_matrix, save)
 
     # Compute the eigen vector
-    logging.info("Computing the eigen values...")
     v, U, ind = compute.compute_eigenvalues(L, k_eigen, ind, path_matrix, save)
     v, U = np.real(v), np.real(U)
 
@@ -108,9 +107,7 @@ def spectral_clustering(
     logging.info("Clustering finished")
 
     # Convert the results to nifti
-    logging.info("Converting the cluster into nifti ...")
     compute.compute_nift(path_nifti_in, path_cluster, path_nifti_out)
-    logging.info("Conversion finished")
 
 
 if __name__ == "__main__":
