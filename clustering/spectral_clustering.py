@@ -1,5 +1,4 @@
 import logging
-import time
 from datetime import datetime
 
 import click
@@ -14,13 +13,18 @@ import clustering.utils as utils
 @click.command()
 @click.option("-i", "--patient_id", type=int, required=True, help="""Patient id""")
 @click.option(
-    "-m", "--method", type=str, required=False, help="""Clustering method used"""
+    "-m",
+    "--method",
+    type=click.Choice(["std", "nrm"], case_sensitive=False),
+    required=False,
+    default="std",
+    help="""Clustering method used (std:Standard(default), nrm:Normalized version)""",
 )
 @click.option(
-    "-s",
-    "--thresold",
+    "-t",
+    "--threshold",
     type=float,
-    required=True,
+    required=False,
     help="""Thresholding values for the binarisation of A""",
 )
 @click.option(
@@ -30,48 +34,69 @@ import clustering.utils as utils
     required=True,
     help="""Number of computed eigen values""",
 )
-def spectral_clustering(patient_id, method, thresold, k_eigen):
+@click.option(
+    "-s",
+    "--save",
+    type=bool,
+    required=False,
+    default=False,
+    help="""Saving the intermediate matrix (L, Lrw)""",
+)
+def spectral_clustering(
+    patient_id: int,
+    method: str = "std",
+    threshold: float = 2,
+    k_eigen: int = 10,
+    save: bool = False,
+):
+    """Workflow to produce the spectral clustering
+    Args:   patient_id(int): coresponding patient id in the database,
+            method(str): method used for the clustering,
+            threshold(float): thresholding value for the binarisation of the matrix
+            k_eigen(int):number of eigen value used
+            save(bool):saving the intermediate matrix
+    """
+    # Define the general paths
+    path_output_dir = utils.check_output_folder(utils.get_output_dir(), patient_id)
+    workflow_id = f"/{datetime.today().strftime('%Y%m%d-%H%M')}_{patient_id}"
+    path_logs = path_output_dir + workflow_id + "_logs.txt"
+    path_cluster = path_output_dir + workflow_id + "_clusters.txt"
+    path_nifti_in = utils.load_data(100307)["G"]["f"]["mask"]
+    path_nifti_out = path_output_dir + workflow_id + "_nifti.nii"
+    path_matrix = path_output_dir + workflow_id
 
-    output = utils.get_output_dir()
-    logs = output + f"/{datetime.today().strftime('%Y%m%d')}_{patient_id}_logs.txt"
-    logging.basicConfig(
-        filename=logs,
-        level=logging.DEBUG,
-        format="%(asctime)s--%(levelname)s-%(message)s",
-        filemode="w",
-    )
-    logging.info(
-        f"Clustering - Patient_id: {patient_id} - Date: {datetime.today().strftime('%Y-%m-%d')}"
-    )
-    logging.info(
-        f"Parameters: -i:{patient_id} , -m:{method}, -s:{thresold}, -k:{k_eigen}  "
+    utils.create_logs(
+        path_logs,
+        patient_id,
+        datetime.today().strftime("%Y%m%d_%H:%M"),
+        method,
+        threshold,
+        k_eigen,
+        save,
     )
 
-    logging.info(f"Loading the data... ")
     # load the data
     A = utils.get_A(patient_id)
-    logging.info(f"A shape:{A.shape}")
 
     # Preprocess the data
     A_wm, ind = compute.compute_A_wm(A, patient_id)
-    if thresold != 0:
-        A_wm, ind = compute.compute_binary_matrix(A_wm, thresold, ind)
+    if threshold != 2:
+        A_wm, ind = compute.compute_binary_matrix(A_wm, threshold, ind)
     A_wm, ind = compute.compute_fully_connected(A_wm, ind)
-    logging.info(f"A_wm shape:{A.shape}")
 
     # Compute all the required matrix
-    L, ind = compute.compute_Lrw(A_wm, ind)
-    logging.info(f"L shape:{L.shape}")
+    if method == "std":
+        L, ind = compute.compute_L(A_wm, ind, path_matrix, save)
+    if method == "nrm":
+        L, ind = compute.compute_Lrw(A_wm, ind, path_matrix, save)
 
     # Compute the eigen vector
     logging.info("Computing the eigen values...")
-    v, U, ind = compute.compute_eigenvalues(L, k_eigen, ind)
+    v, U, ind = compute.compute_eigenvalues(L, k_eigen, ind, path_matrix, save)
     v, U = np.real(v), np.real(U)
 
-    logging.info(f"V shape:{U.shape}")
-
     # Produce the kMean clustering
-    V = whiten(U)
+    U = whiten(U)
     centroids, _ = kmeans(U, k_eigen)
     assignement, dist_ = vq(U, centroids)
     assignement = assignement + 1
@@ -79,26 +104,13 @@ def spectral_clustering(patient_id, method, thresold, k_eigen):
     # Export the results
     logging.info("Exporting the results...")
     results = pd.DataFrame(data={"index": ind, "C": assignement})
-    results.to_csv(
-        output + f"/{datetime.today().strftime('%Y%m%d')}_{patient_id}.txt", index=False
-    )
+    results.to_csv(path_cluster, index=False)
     logging.info("Clustering finished")
-    return
 
     # Convert the results to nifti
-    data = utils.load_data(100307)
-    f_src_nifti = data["G"]["f"]["mask"]
-    f_src_nifti = (
-        "/media/miplab-nas2/Data3/Hamid/HCP100_miplabgolgi/" + f_src_nifti[35:]
-    )
-    cluster_output = "/media/miplab-nas2/Data3/Hamid_Edouard/20230315_100307.txt"
-    N_cluster = 10
-    output_path = "/media/miplab-nas2/Data3/Hamid_Edouard/test.nii"
-    indices_raw = data["G"]["indices"]
-
-    compute.compute_nift(
-        f_src_nifti, cluster_output, N_cluster, output_path, indices_raw
-    )
+    logging.info("Converting the cluster into nifti ...")
+    compute.compute_nift(path_nifti_in, path_cluster, path_nifti_out)
+    logging.info("Conversion finished")
 
 
 if __name__ == "__main__":
