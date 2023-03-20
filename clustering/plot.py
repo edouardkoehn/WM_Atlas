@@ -16,8 +16,10 @@ def plot_connections_distribution(A: sparse, matrix_name=""):
 
 
 def plot_nodes_eigen(v: sparse, matrix_name=""):
+    """Method for plotting the eignvalues repartitions"""
+    v = np.sort(v)
     fig, ax = plt.subplots(figsize=(7, 5))
-    ax.scatter(np.arange(0, len(v)), v)
+    ax.scatter(np.arange(0, v.shape[0]), v)
     ax.set_title(f"Eigen Values :{matrix_name}")
     ax.set_ylabel("Eigen values")
     ax.set_xlabel("k")

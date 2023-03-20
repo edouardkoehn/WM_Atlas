@@ -24,6 +24,7 @@ import clustering.utils as utils
     "-t",
     "--threshold",
     type=float,
+    default=2,
     required=False,
     help="""Thresholding values for the binarisation of A. If not specified,
     no thresholding would be applied""",
@@ -59,12 +60,12 @@ def spectral_clustering(
     """
     # Define the general paths
     path_output_dir = utils.check_output_folder(utils.get_output_dir(), patient_id)
-    workflow_id = f"/{datetime.today().strftime('%Y%m%d-%H%M')}_{patient_id}"
-    path_logs = path_output_dir + workflow_id + "_logs.txt"
-    path_cluster = path_output_dir + workflow_id + "_clusters.txt"
-    path_nifti_in = utils.load_data(100307)["G"]["f"]["mask"]
-    path_nifti_out = path_output_dir + workflow_id + "_nifti.nii"
-    path_matrix = path_output_dir + workflow_id
+    work_id = f"/{datetime.today().strftime('%Y%m%d-%H%M')}_{patient_id}_{threshold}"
+    path_logs = path_output_dir + work_id + "_logs.txt"
+    path_cluster = path_output_dir + work_id + "_clusters.txt"
+    path_nifti_in = utils.load_data(patient_id)["G"]["f"]["mask"]
+    path_nifti_out = path_output_dir + work_id + "_nifti.nii"
+    path_matrix = path_output_dir + work_id
 
     utils.create_logs(
         path_logs,

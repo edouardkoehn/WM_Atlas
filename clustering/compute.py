@@ -22,7 +22,7 @@ def remove_ind(A: sparse, ind_real: np.array, ind: np.array) -> tuple[sparse, np
     indices = [i for i, x in enumerate(spec_ind) if x]
     A_k = A[indices, :]
     A_k = A_k[:, indices]
-    return (A_k, ind)
+    return A_k, ind
 
 
 def compute_fully_connected(A: sparse, ind: np.array) -> tuple[sparse, np.array]:
@@ -45,7 +45,7 @@ def compute_fully_connected(A: sparse, ind: np.array) -> tuple[sparse, np.array]
     else:
         A_connected = A
     logging.info(f"A_wm fully connected, shape:{A_connected.shape}")
-    return (A_connected, ind)
+    return A_connected, ind
 
 
 def compute_A_wm(A: sparse, patient_id: int) -> tuple[sparse, np.array]:
@@ -55,9 +55,9 @@ def compute_A_wm(A: sparse, patient_id: int) -> tuple[sparse, np.array]:
     """
     real_ind = utils.get_ind(patient_id)
     wm_ind = utils.get_WM_ind(patient_id)
-    A_wm = remove_ind(A, real_ind, wm_ind)
-    logging.info(f"A_wm, shape:{A.shape}")
-    return A_wm
+    A_wm, ind = remove_ind(A, real_ind, wm_ind)
+    logging.info(f"A_wm, shape:{A_wm.shape}")
+    return A_wm, ind
 
 
 def compute_binary_matrix(
@@ -111,12 +111,12 @@ def compute_Lrw(
     D_inv, _ = compute_D(A, ind)
     D_inv = sparse.linalg.inv(D_inv)
     logging.info(f"Finished to compute Lrw: {D_inv.shape, type(D_inv)}")
-    L, _ = compute_L(A, ind)
+    L, _ = compute_L(A, ind, path_matrix, False)
     Lrw = D_inv * L
     if save:
         sparse.save_npz(path_matrix + "_Lrw.npz", Lrw)
-    logging.info(f"Lrw shape:{L.shape}")
-    return D_inv * L, ind
+    logging.info(f"Lrw shape:{Lrw.shape}")
+    return Lrw, ind
 
 
 def compute_eigenvalues(

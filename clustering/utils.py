@@ -52,7 +52,7 @@ def create_logs(
     """Method for creating the logs"""
     logging.basicConfig(
         filename=path_logs,
-        level=logging.DEBUG,
+        level=logging.ERROR,
         format="%(asctime)s--%(levelname)s-%(message)s",
         filemode="w",
     )
@@ -90,3 +90,12 @@ def get_ind(patient_id: int) -> np.array:
 def get_WM_ind(patient_id: int) -> np.array:
     """Method to extract the WM indices"""
     return np.asarray(load_data(patient_id)["G"]["indices_wm"], dtype=int)
+
+
+def load_npy(path: str) -> np.array:
+    """Method for loading the .npy files"""
+    try:
+        return np.load(path)
+    except FileNotFoundError as err:
+        print("File data doesn't exist")
+        return err
