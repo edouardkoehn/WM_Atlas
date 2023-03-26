@@ -35,17 +35,26 @@ def compute_fully_connected(A: sparse, ind: np.array) -> tuple[sparse, np.array]
             ind (np.array):np.array of the corresponding indices of the matrix
             to the volume
     """
-    connections = A.sum(axis=1).A1
-    full_nodes = np.where(connections != 0)[0]
-    empty_nodes = np.where(connections == 0)[0]
-    if not (len(empty_nodes) == 0):
-        A_connected = A[full_nodes, :]
-        A_connected = A_connected[:, full_nodes]
-        ind = ind[full_nodes]
+    n_connections, labels = sparse.csgraph.connected_components(A, directed=False)
+
+    if n_connections != 1:
+        masks = []
+        for n in range(0, n_connections):
+            masks.append(np.where(labels == n, True, False))
+        size_mask = [np.sum(i) for i in masks]
+        index_biggest_mask = size_mask.index(np.max(size_mask))
+
+        mask = masks[index_biggest_mask]
+        print(mask[0:10])
+        A_fully = A[mask, :]
+        A_fully = A_fully[:, mask]
+        ind_fully = ind[mask]
+
     else:
-        A_connected = A
-    logging.info(f"A_wm fully connected, shape:{A_connected.shape}")
-    return A_connected, ind
+        A_fully = A
+
+    logging.info(f"A_wm fully connected, shape:{A.shape}")
+    return A_fully, ind_fully
 
 
 def compute_A_wm(A: sparse, patient_id: int) -> tuple[sparse, np.array]:
@@ -143,9 +152,8 @@ def is_connected(A: sparse) -> bool:
 
     return  bool
     """
-    connections = A.sum(axis=1).A1
-    empty_nodes = np.where(connections == 0)[0]
-    if len(empty_nodes) == 0:
+    n_connected, label = sparse.csgraph.connected_components(A, directed=False)
+    if n_connected == 1:
         return True
     else:
         return False

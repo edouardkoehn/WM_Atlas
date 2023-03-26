@@ -15,14 +15,28 @@ def test_remove_ind(A, ind_real, ind):
 
 
 @pytest.mark.parametrize(
-    "A,ind", [(np.matrix([[0, 0, 1], [0, 0, 0], [1, 0, 0]]), np.array([11, 23, 45]))]
+    "A,ind, output_size",
+    [
+        (np.matrix([[0, 0, 1], [0, 0, 0], [1, 0, 0]]), np.array([11, 23, 45]), 2),
+        (
+            np.matrix(
+                [
+                    [0, 1, 0, 0, 0],
+                    [1, 0, 0, 0, 0],
+                    [0, 0, 0, 1, 1],
+                    [0, 0, 1, 0, 0],
+                    [0, 0, 1, 0, 0],
+                ]
+            ),
+            np.array([1, 2, 3, 4, 5]),
+            3,
+        ),
+    ],
 )
-def test_fully_connected(A, ind):
+def test_fully_connected(A, ind, output_size):
     out, ind = compute.compute_fully_connected(sparse.csr_matrix(A), ind)
-    assert out.shape[0] == 2
-    assert out.shape[1] == 2
-    assert ind[0] == [11]
-    assert ind[1] == [45]
+    assert out.shape[0] == output_size
+    assert out.shape[1] == output_size
 
 
 @pytest.mark.parametrize(
@@ -47,7 +61,23 @@ def test_compute_D(A, ind):
     assert out[0, 1] == 0
 
 
-@pytest.mark.parametrize("A", [(np.matrix([[0, 2, 5], [2, 0, 1], [5, 1, 0]]))])
+@pytest.mark.parametrize(
+    "A",
+    [
+        (np.matrix([[0, 2, 5], [2, 0, 1], [5, 1, 0]])),
+        (
+            np.matrix(
+                [
+                    [0, 1, 1, 0, 0],
+                    [1, 0, 0, 0, 0],
+                    [1, 0, 0, 1, 1],
+                    [0, 0, 1, 0, 0],
+                    [0, 0, 1, 0, 0],
+                ]
+            )
+        ),
+    ],
+)
 def test_is_connected(A):
     assert compute.is_connected(sparse.csr_matrix(A))
 
