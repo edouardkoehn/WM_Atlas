@@ -45,7 +45,6 @@ def compute_fully_connected(A: sparse, ind: np.array) -> tuple[sparse, np.array]
         index_biggest_mask = size_mask.index(np.max(size_mask))
 
         mask = masks[index_biggest_mask]
-        print(mask[0:10])
         A_fully = A[mask, :]
         A_fully = A_fully[:, mask]
         ind_fully = ind[mask]
@@ -53,7 +52,7 @@ def compute_fully_connected(A: sparse, ind: np.array) -> tuple[sparse, np.array]
     else:
         A_fully = A
 
-    logging.info(f"A_wm fully connected, shape:{A.shape}")
+    logging.info(f"A_wm fully connected, shape:{A_fully.shape}")
     return A_fully, ind_fully
 
 
@@ -169,9 +168,7 @@ def is_symetric(A: sparse) -> bool:
 
 
 def compute_nift(
-    path_nifit_in: str,
-    cluster_path: str,
-    path_nifti_out: str,
+    path_nifit_in: str, cluster_path: str, path_nifti_out: str, save: bool
 ):
     """Method for converting the cluster into the nifti files
     Args:   path_nifti_in(str):path to the src nifti file
@@ -184,11 +181,14 @@ def compute_nift(
     logging.info("Converting the cluster into nifti ...")
     # load the nifti file
     h = nib.load(path_nifit_in)
-    h.header[
+    nifti_values = (np.copy(h.get_fdata())).astype("int32")
+
+    hd = h.header
+    hd["data_type"] = "int32"
+    hd[
         "descrip"
     ] = "Nifti files containing the cluster generated with spectral clustering (MIPLAB)"
     v = h.header["dim"][1:4]
-    nifti_values = h.get_fdata()
 
     # load the cluster
     clusters = pd.read_csv(cluster_path)
@@ -204,8 +204,10 @@ def compute_nift(
     clusters.C = clusters.C + 1
     # assigne the clusters
     nifti_values[clusters.x, clusters.y, clusters.z] = clusters.C
+
     # export the results
-    output = nib.Nifti1Image(nifti_values, None, header=h.header.copy())
-    nib.save(output, path_nifti_out)
+    output = nib.Nifti1Image(nifti_values, None, header=hd)
+    if save:
+        nib.save(output, path_nifti_out)
     logging.info("Conversion finished")
     return

@@ -52,7 +52,7 @@ def create_logs(
     """Method for creating the logs"""
     logging.basicConfig(
         filename=path_logs,
-        level=logging.ERROR,
+        level=logging.INFO,
         format="%(asctime)s--%(levelname)s-%(message)s",
         filemode="w",
     )
