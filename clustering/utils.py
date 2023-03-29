@@ -99,3 +99,29 @@ def load_npy(path: str) -> np.array:
     except FileNotFoundError as err:
         print("File data doesn't exist")
         return err
+
+
+def get_transformation_file(subject_id: int, type: str):
+    """Method that return the path to the transformation file"""
+    config = get_config()
+    path = config["general_path"] + "/" + str(subject_id) + "/MNINonLinear/xfms"
+    if type == "acpc2nmi":
+        path = path + "/acpc_dc2standard.nii.gz"
+        return path
+    if type == "nmi2acpc":
+        path = path + "/standard2acpc_dc.nii.gz"
+        return path
+    else:
+        print("Transformation type unknown")
+        return os.error.errno
+
+
+def get_reference_file(subject_id: int):
+    config = get_config()
+    path = (
+        config["general_path"]
+        + "/"
+        + str(subject_id)
+        + "/MNINonLinear/T1w_restore_brain.nii.gz"
+    )
+    return path

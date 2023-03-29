@@ -1,4 +1,5 @@
 import logging
+import subprocess
 
 import nibabel as nib
 import numpy as np
@@ -51,6 +52,7 @@ def compute_fully_connected(A: sparse, ind: np.array) -> tuple[sparse, np.array]
 
     else:
         A_fully = A
+        ind_fully = ind
 
     logging.info(f"A_wm fully connected, shape:{A_fully.shape}")
     return A_fully, ind_fully
@@ -137,7 +139,14 @@ def compute_eigenvalues(
             to the volume
     """
     logging.info("Computing the eigen values...")
-    eig_values, eigen_vector = sparse.linalg.eigs(L, k=k, tol=5e-3, which="SM")
+    eig_values, eigen_vector = sparse.linalg.eigsh(
+        L,
+        k=k,
+        tol=1e-1,
+        which="SA",
+        v0=np.ones(L.shape[0]) * 0.01,
+        return_eigenvectors=True,
+    )
     if save:
         np.save(path_matrix + "_U.npy", np.real(eigen_vector))
         np.save(path_matrix + "_v.npy", np.real(eig_values))
@@ -182,7 +191,6 @@ def compute_nift(
     # load the nifti file
     h = nib.load(path_nifit_in)
     nifti_values = (np.copy(h.get_fdata())).astype("int32")
-
     hd = h.header
     hd["data_type"] = "int32"
     hd[
@@ -210,4 +218,69 @@ def compute_nift(
     if save:
         nib.save(output, path_nifti_out)
     logging.info("Conversion finished")
+    return
+
+
+def export_nift(
+    path_nifit_in: str,
+    U: np.array,
+    ind: np.array,
+    k: int,
+    path_nifti_out: str,
+    save: bool,
+):
+    """Method for exporting a nifty file that contains the
+    eigenvectors value as pixel intensity
+    Args:  path_nifti_in(str):path to the src nifti file
+           U(np.array):Eigenvector matrix
+           ind(np.array):list of the indices in the U matrix
+           K_eigen: number of eigen value used for the extraction
+           path_nifti_in(str):path to the output nifti file
+           save(bool):
+    """
+    logging.info("Exporting the nifti ...")
+    h = nib.load(path_nifit_in)
+    hd = h.header
+    hd["data_type"] = "float32"
+    hd["descrip"] = "Nifti files containing the eigenv val as pixel intensity"
+    v = h.header["dim"][1:4]
+    nifti_values = np.zeros((v[0], v[1], v[2], k))
+
+    # Get the coordinate in x,y,z
+    coord = np.zeros((ind.shape[0], 3), dtype=int)
+    for i in range(0, len(coord)):
+        coord[i] = np.unravel_index(ind[i] + 1, (v[0], v[1], v[2]), order="F")
+
+    for i in range(0, len(U)):
+        nifti_values[coord[i, 0], coord[i, 1], coord[i, 2], :] = U[i, :]
+
+    output = nib.Nifti1Image(nifti_values, None, header=hd)
+
+    if save:
+        nib.save(output, path_nifti_out)
+    logging.info(f"Nifti in the ACPC space exported: {output}")
+    return
+
+
+def hb_nii_displace(f_s: str, f_d: str, f_r: str, f_o: str):
+    """Method for converting the nifti file from the acpc2mni space
+    Args:   f_s(str): Nifti file to convert to mni space
+            f_d(std): Nifti file containing the transformation
+            f_r(std): Nifti file containg the reference
+            f_o(std): Nifti output file
+    """
+    root = utils.get_root() + "/matlab"
+    spm12 = root + "/spm12"
+    options = "-nodesktop -nodisplay -nosplash"
+    command_init = f'addpath("{spm12}")'
+    args = f'char("{f_s}"),char("{f_d}"),char("{f_r}"),char("{f_o}"),'
+    +f'"{"InputFilesInReadOnlyDir"}", {"true"}'
+
+    subprocess.run(
+        f"matlab {options} -sd '{root}' -r '{command_init};"
+        + f"hb_nii_displace({args});exit()'",
+        shell=True,
+        check=True,
+    )
+    logging.info(f"Nifti in the MNI space exported: {f_o}")
     return

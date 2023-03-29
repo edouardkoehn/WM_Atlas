@@ -23,5 +23,7 @@ def plot_nodes_eigen(v: sparse, matrix_name=""):
     ax.set_title(f"Eigen Values :{matrix_name}")
     ax.set_ylabel("Eigen values")
     ax.set_xlabel("k")
+    # ax.set_xlim([0,10])
+    # ax.set_ylim([0,0.004])
     ax.grid()
     plt.show()
