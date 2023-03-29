@@ -274,7 +274,8 @@ def hb_nii_displace(f_s: str, f_d: str, f_r: str, f_o: str):
     options = "-nodesktop -nodisplay -nosplash"
     command_init = f'addpath("{spm12}")'
     args = f'char("{f_s}"),char("{f_d}"),char("{f_r}"),char("{f_o}"),'
-    +f'"{"InputFilesInReadOnlyDir"}", {"true"}'
+    extra_args = f'"{"InputFilesInReadOnlyDir"}", {"true"}'
+    args = args + extra_args
 
     subprocess.run(
         f"matlab {options} -sd '{root}' -r '{command_init};"
