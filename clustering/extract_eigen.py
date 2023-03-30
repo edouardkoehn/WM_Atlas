@@ -73,7 +73,15 @@ def extract_eigen(
     path_logs = path_output_dir + work_id + "_extraction_logs.txt"
     path_nifti_in = utils.load_data(subject_id)["G"]["f"]["mask"]
     path_nifti_out = path_output_dir + work_id + "_extraction_acpc.nii.gz"
+    path_nifti_original_acpc_out = path_output_dir + work_id + "_original_acpc.nii.gz"
     path_matrix = path_output_dir + work_id
+
+    if nifti_type == "mni":
+        path_nifti_original_mni_out = path_output_dir + work_id + "_original_mni.nii.gz"
+        f_s = path_nifti_out
+        f_d = utils.get_transformation_file(subject_id, "acpc2nmi")
+        f_r = utils.get_reference_file(subject_id)
+        f_o = path_output_dir + work_id + "_extraction_mni.nii.gz"
 
     utils.create_logs(
         path_logs,
@@ -106,15 +114,26 @@ def extract_eigen(
     v, U, ind = compute.compute_eigenvalues(L, k_eigen, ind, path_matrix, save)
     v = np.abs(v)
 
-    # Convert the results to nifti in the acpc space
+    # Export the results
     compute.export_nift(path_nifti_in, U, ind, k_eigen, path_nifti_out, save)
-    if nifti_type == "mni":
-        f_s = path_nifti_out
-        f_d = utils.get_transformation_file(subject_id, "acpc2nmi")
-        f_r = utils.get_reference_file(subject_id)
-        f_o = path_output_dir + work_id + "_extraction_mni.nii.gz"
 
+    # Convert the results to nifti in the acpc space
+    if nifti_type == "mni":
         compute.hb_nii_displace(f_s, f_d, f_r, f_o)
+
+    # Copy the original nifti
+    if nifti_type == "mni":
+        compute.copy_nifti(
+            path_nifti_in,
+            path_nifti_original_acpc_out,
+            type=nifti_type,
+            f_s=path_nifti_in,
+            f_d=f_d,
+            f_r=f_r,
+            f_o=path_nifti_original_mni_out,
+        )
+    elif nifti_type == "acpc":
+        compute.copy_nifti(path_nifti_in, path_nifti_original_acpc_out, type=nifti_type)
 
 
 if __name__ == "__main__":

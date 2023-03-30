@@ -1,4 +1,5 @@
 import logging
+import shutil
 import subprocess
 
 import nibabel as nib
@@ -264,6 +265,15 @@ def export_nift(
     if save:
         nib.save(output, path_nifti_out)
     logging.info(f"Nifti in the ACPC space exported: {output}")
+    return
+
+
+def copy_nifti(path_nifti_in: str, path_nifti_original_acpc_out: str, type: str, **f):
+    """Method for copying the original nifti file into the ouput folder"""
+    if type == "mni":
+        # shutil.copyfile(f['f_s'],f['f_o'])
+        hb_nii_displace(f["f_s"], f["f_d"], f["f_r"], f["f_o"])
+    shutil.copyfile(path_nifti_in, path_nifti_original_acpc_out)
     return
 
 
