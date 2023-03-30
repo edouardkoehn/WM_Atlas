@@ -190,14 +190,14 @@ def compute_nift(
     logging.info("Converting the cluster into nifti ...")
     # load the nifti file
     h = nib.load(path_nifit_in)
-    nifti_values = (np.copy(h.get_fdata())).astype("int32")
+    # nifti_values = (np.copy(h.get_fdata())).astype("int32")
     hd = h.header
     hd["data_type"] = "int32"
     hd[
         "descrip"
     ] = "Nifti files containing the cluster generated with spectral clustering (MIPLAB)"
     v = h.header["dim"][1:4]
-
+    nifti_values = np.zeros((v[0], v[1], v[2], 1)).astype(int)
     # load the cluster
     clusters = pd.read_csv(cluster_path)
     coord = np.zeros((clusters.shape[0], 3), dtype=int)
@@ -205,13 +205,18 @@ def compute_nift(
         coord[i] = np.unravel_index(
             clusters["index"][i] + 1, (v[0], v[1], v[2]), order="F"
         )
+
     clusters["x"] = coord[:, 0]
     clusters["y"] = coord[:, 1]
     clusters["z"] = coord[:, 2]
-
     clusters.C = clusters.C + 1
+    print(clusters)
     # assigne the clusters
-    nifti_values[clusters.x, clusters.y, clusters.z] = clusters.C
+    print(nifti_values[clusters.x[0], clusters.y[0], clusters.z[0], :])
+    print(clusters.C[0])
+    nifti_values[clusters.x, clusters.y, clusters.z, :] = np.array(clusters.C).reshape(
+        (len(clusters.x), 1)
+    )
 
     # export the results
     output = nib.Nifti1Image(nifti_values, None, header=hd)
@@ -260,6 +265,17 @@ def export_nift(
         nib.save(output, path_nifti_out)
     logging.info(f"Nifti in the ACPC space exported: {output}")
     return
+
+
+def extract_eigen_from_nifti(nifti_path: str, indices: np.array):
+    """Extract the values of the nifti file, with the wm mask(flatten list of wm_ind)"""
+    h = nib.load(nifti_path)
+    data = np.copy(h.get_fdata())
+    unpacked_ind = np.unravel_index(
+        indices + 1, (data.shape[0], data.shape[1], data.shape[2]), order="F"
+    )
+    data = data[unpacked_ind]
+    return data
 
 
 def hb_nii_displace(f_s: str, f_d: str, f_r: str, f_o: str):

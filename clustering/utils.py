@@ -29,9 +29,75 @@ def get_output_dir() -> str:
     return get_config()["output_dir"]
 
 
-def check_output_folder(output_path: str, patient_id: int):
-    """Method for creating the output folder if doesn't exist"""
+def check_Laplacien(ouptput_path: str, L_type: str, threshold: int):
+    if L_type == "comb":
+        Laplacien = [
+            f for f in os.listdir(ouptput_path) if f.endswith(f"{threshold}_L.npz")
+        ]
+        if len(Laplacien) != 1:
+            print(f"No matching laplacien matrix:{ouptput_path}")
+            return False
+        else:
+            return True
+
+    elif L_type == "rw":
+        Laplacien = [
+            f for f in os.listdir(ouptput_path) if f.endswith(f"{threshold}_Lrw.npz")
+        ]
+        if len(Laplacien) != 1:
+            print(f"No matching laplacien matrix:{ouptput_path}")
+            return False
+        else:
+            return True
+    else:
+        print("Laplacien type unknown")
+        return False
+
+
+def check_nifti(ouptput_path: str, L_type: str, nifti_type: str, threshold: int):
+    if check_Laplacien(ouptput_path, L_type, threshold):
+        if nifti_type == "acpc":
+            nifti = [
+                f
+                for f in os.listdir(ouptput_path)
+                if f.endswith(f"{threshold}_extraction_acpc.nii.gz")
+            ]
+            if len(nifti) != 1:
+                print(f"No matching  nifti file:{ouptput_path}")
+                return False
+            else:
+                return ouptput_path + "/" + nifti[0]
+        elif nifti_type == "mni":
+            nifti = [
+                f
+                for f in os.listdir(ouptput_path)
+                if f.endswith(f"{threshold}_extraction_mni.nii.gz")
+            ]
+            if len(nifti) != 1:
+                print(f"No matching  nifti file:{ouptput_path}")
+                return False
+            else:
+                return ouptput_path + "/" + nifti[0]
+    else:
+        print(f"Can not find the correct nifti file:{ouptput_path}")
+
+    return
+
+
+def check_output_folder(output_path: str, patient_id: int) -> bool:
     path = output_path + "/" + f"{patient_id}"
+    if os.path.isdir(path):
+        return True
+    else:
+        return False
+
+
+def create_output_folder(output_path: str, patient_id: int, type=str):
+    """Method for creating the output folder if doesn't exist"""
+    if type == "subject":
+        path = output_path + "/" + f"{patient_id}"
+    elif type == "population":
+        path = output_path + "/population_cluster"
     if not (os.path.isdir(path)):
         try:
             os.mkdir(path)
@@ -47,20 +113,22 @@ def create_logs(
     method: str,
     threshold: float,
     k_eigen: str,
+    nifti: str,
     save: bool,
 ):
     """Method for creating the logs"""
-    logging.basicConfig(
-        filename=path_logs,
-        level=logging.INFO,
-        format="%(asctime)s--%(levelname)s-%(message)s",
-        filemode="w",
-    )
-    logging.info(f"Clustering - Patient_id: {patient_id} - Date: {date}")
-    logging.info(
-        f"Parameters: -i:{patient_id} , -m:{method}, -t:{threshold},"
-        f"-k:{k_eigen}, -s:{save} "
-    )
+    if save:
+        logging.basicConfig(
+            filename=path_logs,
+            level=logging.INFO,
+            format="%(asctime)s--%(levelname)s-%(message)s",
+            filemode="w",
+        )
+        logging.info(f"Clustering - Patient_id: {patient_id} - Date: {date}")
+        logging.info(
+            f"Parameters: -i:{patient_id} , -m:{method}, -t:{threshold},-n:{nifti}"
+            f"-k:{k_eigen}, -s:{save} "
+        )
     return
 
 

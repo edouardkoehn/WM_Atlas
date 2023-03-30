@@ -60,7 +60,7 @@ def spectral_clustering(
             save(bool):saving the intermediate matrix
     """
     # Define the general paths
-    path_output_dir = utils.check_output_folder(utils.get_output_dir(), subject_id)
+    path_output_dir = utils.create_output_folder(utils.get_output_dir(), subject_id)
     work_id = f"/{datetime.today().strftime('%Y%m%d-%H%M')}_{subject_id}_{threshold}"
     path_logs = path_output_dir + work_id + "_logs.txt"
     path_cluster = path_output_dir + work_id + "_clusters.txt"
