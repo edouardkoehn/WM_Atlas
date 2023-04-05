@@ -264,7 +264,7 @@ def export_nift(
 
     if save:
         nib.save(output, path_nifti_out)
-    logging.info(f"Nifti in the ACPC space exported: {output}")
+    logging.info(f"Nifti in the ACPC space exported: {path_nifti_out}")
     return
 
 
@@ -273,7 +273,8 @@ def copy_nifti(path_nifti_in: str, path_nifti_original_acpc_out: str, type: str,
     if type == "mni":
         # shutil.copyfile(f['f_s'],f['f_o'])
         hb_nii_displace(f["f_s"], f["f_d"], f["f_r"], f["f_o"])
-    shutil.copyfile(path_nifti_in, path_nifti_original_acpc_out)
+        shutil.copyfile(path_nifti_in, path_nifti_original_acpc_out)
+
     return
 
 
@@ -284,6 +285,7 @@ def extract_eigen_from_nifti(nifti_path: str, indices: np.array):
     unpacked_ind = np.unravel_index(
         indices + 1, (data.shape[0], data.shape[1], data.shape[2]), order="F"
     )
+
     data = data[unpacked_ind]
     return data
 

@@ -14,9 +14,9 @@ import clustering.utils as utils
     "--method",
     type=click.Choice(["comb", "rw"], case_sensitive=False),
     required=False,
-    default="std",
+    default="acpc",
     help="""Clustering method used (comb:Combinatorial(default),
-    rd:Random Walke version)""",
+    rd:Random Walk version)""",
 )
 @click.option(
     "-t",
@@ -37,9 +37,9 @@ import clustering.utils as utils
 @click.option(
     "-n",
     "--nifti_type",
-    type=click.Choice(["std", "mni"], case_sensitive=False),
+    type=click.Choice(["acpc", "mni"], case_sensitive=False),
     required=False,
-    default="std",
+    default="acpc",
     help="""Type of nifti saved""",
 )
 @click.option(
@@ -52,10 +52,10 @@ import clustering.utils as utils
 )
 def extract_eigen(
     subject_id: int,
-    method: str = "std",
+    method: str = "comb",
     threshold: float = 2,
     k_eigen: int = 10,
-    nifti_type: str = "std",
+    nifti_type: str = "acpc",
     save: bool = False,
 ):
     """Workflow to produce the spectral clustering
@@ -103,7 +103,8 @@ def extract_eigen(
         A_wm, ind = compute.compute_binary_matrix(A_wm, threshold, ind)
 
     A_wm, ind = compute.compute_fully_connected(A_wm, ind)
-
+    # A_wm=A_wm[0:100,0:100]
+    # ind=ind[0:100]
     # Compute all the required matrix
     if method == "comb":
         L, ind = compute.compute_L(A_wm, ind, path_matrix, save)

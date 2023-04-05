@@ -42,7 +42,7 @@ import clustering.utils as utils
 @click.option(
     "-n",
     "--nifti_type",
-    type=click.Choice(["acpc", "nmi"], case_sensitive=False),
+    type=click.Choice(["acpc", "mni"], case_sensitive=False),
     required=True,
     help="""Nifti space used""",
 )
@@ -59,7 +59,7 @@ def clustering_population(
     method: str = "comb",
     threshold: float = 2,
     k_eigen: int = 10,
-    nifti_type: str = "std",
+    nifti_type: str = "nmi",
     save: bool = False,
 ):
     """Workflow to produce the spectral clustering at the population base
@@ -75,14 +75,21 @@ def clustering_population(
     path_niftis_in = []
     in_dir = utils.get_output_dir()
     work_id = f"/{datetime.today().strftime('%Y%m%d-%H%M')}_{k_eigen}_{threshold}"
-    path_logs = f"{utils.create_output_folder(in_dir, subjects_id[0], 'population')}"
-    +work_id + "_logs.txt"
-    path_nifti_out = f"{utils.create_output_folder(in_dir,subjects_id[0],'population')}"
-    +work_id + f"_{nifti_type}.nii.gz"
+    path_logs = (
+        f"{utils.create_output_folder(in_dir, subjects_id[0], 'population')}"
+        + work_id
+        + "_logs.txt"
+    )
+    path_nifti_out = (
+        f"{utils.create_output_folder(in_dir,subjects_id[0],'population')}"
+        + work_id
+        + f"_{nifti_type}.nii.gz"
+    )
     path_output_cluster = (
         f"{utils.create_output_folder(in_dir,subjects_id[0],'population')}"
+        + work_id
+        + "_clusters.txt"
     )
-    +work_id + "_clusters.txt"
 
     for subject_id in subjects_id:
         if utils.check_output_folder:
@@ -111,11 +118,12 @@ def clustering_population(
 
     # load the data
     Us = []
-    dim = (10, 10, 10, 10)
-    mask = np.arange(0, 10000).reshape(dim[0], dim[1], dim[2], dim[3])
+    dim = (260, 311, 260)
+    mask = np.arange(0, 21023600).reshape(dim[0], dim[1], dim[2])
     mask = np.ravel(mask, order="F")
-    mask = mask[0:50]
-
+    start = 2627950
+    stop = start * 7
+    mask = mask[start:stop]
     for nifti in path_niftis_in:
         U = compute.extract_eigen_from_nifti(nifti, mask)
         Us.append(U)
