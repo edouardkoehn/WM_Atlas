@@ -7,12 +7,12 @@ import pandas as pd
 from scipy.cluster.vq import kmeans, vq, whiten
 
 import clustering.utils as utils
-import clustering.utils_nifti as nifti_utils
+import clustering.utils_nifti as utils_nifti
 
 
 @click.command()
 @click.option(
-    "-i", "--subject_ids", type=int, multiple=True, required=True, help="""Patient id"""
+    "-i", "--subject_id", type=int, multiple=False, required=True, help="""Patient id"""
 )
 @click.option(
     "-m",
@@ -42,7 +42,7 @@ import clustering.utils_nifti as nifti_utils
 @click.option(
     "-n",
     "--nifti_type",
-    type=click.Choice(["reslice"], case_sensitive=False),
+    type=click.Choice(["acpc", "mni"], case_sensitive=False),
     required=True,
     help="""Nifti space used""",
 )
@@ -54,8 +54,8 @@ import clustering.utils_nifti as nifti_utils
     default=False,
     help="""Saving the intermediate matrix (L, Lrw)""",
 )
-def clustering_population(
-    subject_ids: int,
+def clustering_individual(
+    subject_id: int,
     method: str = "comb",
     threshold: float = 2,
     k_eigen: int = 10,
@@ -67,47 +67,42 @@ def clustering_population(
             method(str): method used for computing the laplacien,
             threshold(float): thresholding value for the binarisation of the matrix
             k_eigen(int):number of eigen value used
-            nifti_type:from which nifti the clustering would be produced
+            nifti_type(str): from which nifti space, you want to produce the clustering
             save(bool):saving the intermediate matrix
     """
     # Define the general paths
-    subjects_id = list(subject_ids)
-    path_inputs_dir = []
-    path_niftis_in = []
+
     in_dir = utils.get_output_dir()
-    work_id = f"/{datetime.today().strftime('%Y%m%d-%H%M')}_{k_eigen}_{threshold}"
+    work_id = (
+        f"/{datetime.today().strftime('%Y%m%d-%H%M')}_{subject_id}_{threshold}"
+        + f"_{k_eigen}"
+    )
     path_logs = (
-        f"{utils.create_output_folder(in_dir, subjects_id[0], 'population')}"
+        f"{utils.create_output_folder(in_dir, subject_id, 'subject')}"
         + work_id
-        + "_logs.txt"
+        + "_clustering_logs.txt"
     )
     path_nifti_out = (
-        f"{utils.create_output_folder(in_dir,subjects_id[0],'population')}"
+        f"{utils.create_output_folder(in_dir,subject_id,'subject')}"
         + work_id
-        + f"_{nifti_type}.nii.gz"
+        + f"_clusters_{nifti_type}.nii.gz"
     )
     path_output_cluster = (
-        f"{utils.create_output_folder(in_dir,subjects_id[0],'population')}"
+        f"{utils.create_output_folder(in_dir,subject_id,'subject')}"
         + work_id
         + "_clusters.txt"
     )
-    for subject_id in subjects_id:
-        if utils.check_output_folder:
-            path_inputs_dir.append(
-                utils.create_output_folder(
-                    utils.get_output_dir(), subject_id, "subject"
-                )
-            )
-        else:
-            print("Output folder not found : subject_id")
-
-    for output, id in zip(path_inputs_dir, subjects_id):
-        path_niftis_in.append(utils.check_nifti(output, method, nifti_type, threshold))
-        work_id = f"/{datetime.today().strftime('%Y%m%d-%H%M')}_{id}_{threshold}"
+    if utils.check_output_folder:
+        path_input_dir = utils.create_output_folder(
+            utils.get_output_dir(), subject_id, "subject"
+        )
+    else:
+        print("Output folder not found : subject_id")
+    path_nifti_in = utils.check_nifti(path_input_dir, method, nifti_type, threshold)
 
     utils.create_logs(
         path_logs,
-        subjects_id,
+        subject_id,
         datetime.today().strftime("%Y%m%d_%H:%M"),
         method,
         threshold,
@@ -116,49 +111,34 @@ def clustering_population(
         save,
     )
 
-    # load the data
-    logging.info("Loading data...")
-    Us = []
-    path_mask = utils.get_mask_path("95")
-    wm_indices = nifti_utils.get_mask_ind(path_mask)
-
-    for nifti in path_niftis_in:
-        U, wm_indices = nifti_utils.extract_eigen_from_nifti(
-            nifti, wm_indices, "population"
-        )
-        Us.append(U)
+    # Load the data
+    wm_indices = []
+    U, wm_indices = utils_nifti.extract_eigen_from_nifti(
+        path_nifti_in, wm_indices, "individual"
+    )
 
     # Produce the clustering matrix
-    K = np.zeros((len(wm_indices), k_eigen * len(subjects_id)))
-    for id in range(0, len(subjects_id)):
-        U_subject = Us[id]
-        for voxel in range(0, U_subject.shape[0]):
-            start_col = id * k_eigen
-            end_col = start_col + k_eigen
-            K[voxel, start_col:end_col] = U_subject[voxel, 0:k_eigen]
-
-    # Clean the clustering matrix
-    nan_indices = np.where(np.isnan(K))[0]
-    wm_indices = np.delete(wm_indices, nan_indices)
-    K = np.delete(K, axis=0, obj=nan_indices)
-    logging.info(f"Removed {len(nan_indices)} voxels")
+    K = np.zeros((len(U), k_eigen))
+    for voxel in range(0, U.shape[0]):
+        K[voxel, 0:k_eigen] = U[voxel, 0:k_eigen]
+    logging.info(f"Clustering matrix shape : {K.shape}")
 
     # Produce the kMean clustering
     K = whiten(K)
     centroids, _ = kmeans(K, k_eigen)
     assignement, dist_ = vq(K, centroids)
     assignement = assignement + 1
+    logging.info("Clustering finished")
 
     # Export the results
     results = pd.DataFrame(data={"index": wm_indices, "C": assignement})
     if save:
         logging.info("Exporting the results...")
         results.to_csv(path_output_cluster, index=False)
-        logging.info("Clustering finished")
 
     # Convert the results to nifti
-    nifti_utils.compute_nift(path_mask, path_output_cluster, path_nifti_out, save)
+    utils_nifti.compute_nift(path_nifti_in, path_output_cluster, path_nifti_out, save)
 
 
 if __name__ == "__main__":
-    clustering_population()
+    clustering_individual()

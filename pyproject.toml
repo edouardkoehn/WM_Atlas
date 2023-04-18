@@ -34,6 +34,7 @@ build-backend = "poetry.core.masonry.api"
 spectral_clustering = "clustering:spectral_clustering.spectral_clustering"
 extract_eigen= "clustering:extract_eigen.extract_eigen"
 clustering_pop= "clustering:clustering_population.clustering_population"
+clustering_ind= "clustering:clustering_individual.clustering_individual"
 
 [tool.commitizen]
 version = "0.2.1"

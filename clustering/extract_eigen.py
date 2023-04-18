@@ -5,6 +5,7 @@ import numpy as np
 
 import clustering.compute as compute
 import clustering.utils as utils
+import clustering.utils_nifti as utils_nifti
 
 
 @click.command()
@@ -58,11 +59,15 @@ def extract_eigen(
     nifti_type: str = "acpc",
     save: bool = False,
 ):
-    """Workflow to produce the spectral clustering
+    """Workflow to extract the eigenvalues of subject's graph and to save the
+    eigen values in a specific eigen space.
     Args:   subject_id(int): coresponding patient id in the database,
-            method(str): method used for computing the laplacien,
+            method(str): method used for computing the laplacien either combinatorial or
+            randomwalk laplacian,
             threshold(float): thresholding value for the binarisation of the matrix
             k_eigen(int):number of eigen value used
+            nitfi_type(str): Which nifti you want to produce, if "mni" the workflow,
+            would produce the extraction in the acpc and in the mni space.
             save(bool):saving the intermediate matrix
     """
     # Define the general paths
@@ -73,7 +78,7 @@ def extract_eigen(
     path_logs = path_output_dir + work_id + "_extraction_logs.txt"
     path_nifti_in = utils.load_data(subject_id)["G"]["f"]["mask"]
     path_nifti_out = path_output_dir + work_id + "_extraction_acpc.nii.gz"
-    path_nifti_original_acpc_out = path_output_dir + work_id + "_original_acpc.nii.gz"
+    path_nifti_original_acpc_out = path_output_dir + work_id + "_original_acpc.nii"
     path_matrix = path_output_dir + work_id
 
     if nifti_type == "mni":
@@ -82,6 +87,8 @@ def extract_eigen(
         f_d = utils.get_transformation_file(subject_id, "acpc2nmi")
         f_r = utils.get_reference_file(subject_id)
         f_o = path_output_dir + work_id + "_extraction_mni.nii.gz"
+        f_o_reslice = path_output_dir + work_id + "_extraction_mni_reslice.nii.gz"
+        mask = utils.get_mask_path("95")
 
     utils.create_logs(
         path_logs,
@@ -114,17 +121,17 @@ def extract_eigen(
     # Compute the eigen vector
     v, U, ind = compute.compute_eigenvalues(L, k_eigen, ind, path_matrix, save)
     v = np.abs(v)
-
     # Export the results
-    compute.export_nift(path_nifti_in, U, ind, k_eigen, path_nifti_out, save)
+    utils_nifti.export_nift(path_nifti_in, U, ind, k_eigen, path_nifti_out, save)
 
     # Convert the results to nifti in the acpc space
     if nifti_type == "mni":
-        compute.hb_nii_displace(f_s, f_d, f_r, f_o)
+        utils_nifti.hb_nii_displace(f_s, f_d, f_r, f_o)
+        utils_nifti.hb_reslice_vol(f_o, mask, f_o_reslice)
 
     # Copy the original nifti
     if nifti_type == "mni":
-        compute.copy_nifti(
+        utils_nifti.copy_nifti(
             path_nifti_in,
             path_nifti_original_acpc_out,
             type=nifti_type,
@@ -134,7 +141,9 @@ def extract_eigen(
             f_o=path_nifti_original_mni_out,
         )
     elif nifti_type == "acpc":
-        compute.copy_nifti(path_nifti_in, path_nifti_original_acpc_out, type=nifti_type)
+        utils_nifti.copy_nifti(
+            path_nifti_in, path_nifti_original_acpc_out, type=nifti_type
+        )
 
 
 if __name__ == "__main__":

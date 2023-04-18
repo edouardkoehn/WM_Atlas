@@ -139,7 +139,8 @@ for iV = 1:Nv
 
     % interpolate source file to find values at positions
     v_o = interp3(v_s,yy_s,xx_s,zz_s);
-    v_o(isnan(v_o)) = 0;
+    %v_o(isnan(v_o)) = 0;
+    v_o(v_o==0)=NaN;
 
     %-Write output
     if iV==1

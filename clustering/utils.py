@@ -9,12 +9,12 @@ from scipy import io, sparse
 
 
 def get_root():
-    """Methods for getting the root of the repo"""
+    """Methods for getting the root of the repository"""
     return str(Path(__file__).resolve().parent.parent)
 
 
 def get_config() -> dict:
-    """Method for extracting the configuration from the config file"""
+    """Method for extracting the information from the config file"""
     file = get_root() + "/clustering/config.yml"
     with open(file) as f:
         try:
@@ -29,7 +29,12 @@ def get_output_dir() -> str:
     return get_config()["output_dir"]
 
 
-def check_Laplacien(ouptput_path: str, L_type: str, threshold: int):
+def check_Laplacien(ouptput_path: str, L_type: str, threshold: int) -> bool:
+    """Method for checking if an output folder contains a specific Laplacian matrix
+    Args:   Output_path(str): Path of the folder to check
+            L_type(std): Type of the laplacien matrix (rw,comb)
+            threshold(int): Which threshold was used during the extraction
+    """
     if L_type == "comb":
         Laplacien = [
             f for f in os.listdir(ouptput_path) if f.endswith(f"{threshold}_L.npz")
@@ -55,6 +60,13 @@ def check_Laplacien(ouptput_path: str, L_type: str, threshold: int):
 
 
 def check_nifti(ouptput_path: str, L_type: str, nifti_type: str, threshold: int):
+    """Method for checking if a folder contains a specific nifti file
+    Args:   Output_path(str): Path of the folder to check
+            L_type(std): Type of the laplacien matrix (rw,comb)
+            nifti_type(str): Type of the nifti (mni, acpc, reslice)
+            threshold(int): Which threshold was used during the extraction
+    """
+
     if check_Laplacien(ouptput_path, L_type, threshold):
         if nifti_type == "acpc":
             nifti = [
@@ -78,6 +90,18 @@ def check_nifti(ouptput_path: str, L_type: str, nifti_type: str, threshold: int)
                 return False
             else:
                 return ouptput_path + "/" + nifti[0]
+        elif nifti_type == "reslice":
+            nifti = [
+                f
+                for f in os.listdir(ouptput_path)
+                if f.endswith(f"{threshold}_extraction_mni_reslice.nii.gz")
+            ]
+            if len(nifti) != 1:
+                print(f"No matching  nifti file:{ouptput_path}")
+                return False
+            else:
+                return ouptput_path + "/" + nifti[0]
+
     else:
         print(f"Can not find the correct nifti file:{ouptput_path}")
 
@@ -85,6 +109,9 @@ def check_nifti(ouptput_path: str, L_type: str, nifti_type: str, threshold: int)
 
 
 def check_output_folder(output_path: str, patient_id: int) -> bool:
+    """Boolean function for checking if the ouptut folder of a specific subject
+    exits.
+    """
     path = output_path + "/" + f"{patient_id}"
     if os.path.isdir(path):
         return True
@@ -93,7 +120,7 @@ def check_output_folder(output_path: str, patient_id: int) -> bool:
 
 
 def create_output_folder(output_path: str, patient_id: int, type=str):
-    """Method for creating the output folder if doesn't exist"""
+    """Method for creating the output folder of a subject if doesn't exist"""
     if type == "subject":
         path = output_path + "/" + f"{patient_id}"
     elif type == "population":
@@ -185,6 +212,7 @@ def get_transformation_file(subject_id: int, type: str):
 
 
 def get_reference_file(subject_id: int):
+    """Method that return the path to the reference file of a subject"""
     config = get_config()
     path = (
         config["general_path"]
@@ -192,4 +220,15 @@ def get_reference_file(subject_id: int):
         + str(subject_id)
         + "/MNINonLinear/T1w_restore_brain.nii.gz"
     )
+    return path
+
+
+def get_mask_path(type: str):
+    """Method that returns the path to the WM mask in the mni space"""
+    path = get_config()["general_path"]
+    path = path + "/Templates"
+    if type == "95":
+        path = path + "/HCP100_cerebrum_graph_wm_template_binary_thresh95Percent.nii.gz"
+    elif type == "50":
+        path = path + "/HCP100_cerebrum_graph_wm_template_binary_thresh50Percent.nii.gz"
     return path
