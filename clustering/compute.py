@@ -2,6 +2,7 @@ import logging
 
 import numpy as np
 import scipy.sparse as sparse
+import scipy.spatial.distance as distance
 from sklearn import utils as sk
 
 import clustering.utils as utils
@@ -205,3 +206,48 @@ def is_symetric(A: sparse) -> bool:
         return True
     else:
         return False
+
+
+def compute_sym_eigen_from_rw_eigen(U_rw: np.array, D: np.array):
+    D_root = np.sqrt(D).todense()
+    U_sym = np.dot(D_root, U_rw)
+    return U_sym
+
+
+def compute_distance(centroids: np.array, features: np.array, assignements: np.array):
+    """Method for computing the distance between each voxel and it's corresponding
+    voxel
+    Args:   centroids(np.array): Array(KxK) containing the centroids coordinates of
+            each clusters
+            features(np.array): Array(NXK) Features matrix
+            assigmnement(np.array): Array(Nx1) Assignement matrix
+
+    returns:    dist(np.array): Array(NX1) list of the distances"""
+    dist = np.zeros(features.shape[0])
+
+    for i in range(features.shape[0]):
+        cluster = assignements[i]
+        centroid = centroids[cluster]
+        dist[i] = distance.euclidean(centroid, features[i, :])
+
+    return dist
+
+
+def compute_zscore(centroids: np.array, features: np.array, assignements: np.array):
+    """Method for computing the z-score of each voxel"""
+    dist = compute_distance(centroids, features, assignements)
+    number_cluster = centroids.shape[0]
+
+    # Produce the cluster matrix
+    matrix_cluster = np.zeros((number_cluster, 2))
+    for i in range(number_cluster):
+        voxels_dist = dist[np.where(assignements == i)]
+        matrix_cluster[i, 0] = np.mean(voxels_dist)
+        matrix_cluster[i, 1] = np.std(voxels_dist)
+
+    z_score = np.zeros(features.shape[0])
+    for i in range(features.shape[0]):
+        cluster_val = matrix_cluster[assignements[i]]
+        z_score[i] = (dist[i] - cluster_val[0]) / cluster_val[1]
+
+    return z_score

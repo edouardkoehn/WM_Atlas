@@ -141,7 +141,8 @@ def create_logs(
     threshold: float,
     k_eigen: str,
     nifti: str,
-    save: bool,
+    value_type=["cluster"],
+    save=False,
 ):
     """Method for creating the logs"""
     if save:
@@ -154,7 +155,7 @@ def create_logs(
         logging.info(f"Clustering - Patient_id: {patient_id} - Date: {date}")
         logging.info(
             f"Parameters: -i:{patient_id} , -m:{method}, -t:{threshold},-n:{nifti}"
-            f"-k:{k_eigen}, -s:{save} "
+            f"-k:{k_eigen},-values {value_type} , -s:{save} "
         )
     return
 

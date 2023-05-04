@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from scipy.cluster.vq import kmeans, vq, whiten
 
+import clustering.compute as compute
 import clustering.utils as utils
 import clustering.utils_nifti as utils_nifti
 
@@ -47,6 +48,14 @@ import clustering.utils_nifti as utils_nifti
     help="""Nifti space used""",
 )
 @click.option(
+    "-v",
+    "--value_type",
+    type=click.Choice(["cluster", "distance", "z_score"], case_sensitive=False),
+    required=False,
+    help="""Value to assign in the volume""",
+    multiple=True,
+)
+@click.option(
     "-s",
     "--save",
     type=bool,
@@ -60,6 +69,7 @@ def clustering_individual(
     threshold: float = 2,
     k_eigen: int = 10,
     nifti_type: str = "nmi",
+    value_type: str = "cluster",
     save: bool = False,
 ):
     """Workflow to produce the spectral clustering at the population base
@@ -71,7 +81,7 @@ def clustering_individual(
             save(bool):saving the intermediate matrix
     """
     # Define the general paths
-
+    values_type = list(value_type)
     in_dir = utils.get_output_dir()
     work_id = (
         f"/{datetime.today().strftime('%Y%m%d-%H%M')}_{subject_id}_{threshold}"
@@ -82,11 +92,15 @@ def clustering_individual(
         + work_id
         + "_clustering_logs.txt"
     )
-    path_nifti_out = (
-        f"{utils.create_output_folder(in_dir,subject_id,'subject')}"
-        + work_id
-        + f"_clusters_{nifti_type}.nii.gz"
-    )
+    path_nifti_out = [
+        (
+            f"{utils.create_output_folder(in_dir,subject_id,'subject')}"
+            + work_id
+            + f"_clusters_{nifti_type}_{value}.nii.gz"
+        )
+        for value in value_type
+    ]
+
     path_output_cluster = (
         f"{utils.create_output_folder(in_dir,subject_id,'subject')}"
         + work_id
@@ -108,6 +122,7 @@ def clustering_individual(
         threshold,
         k_eigen,
         nifti_type,
+        values_type,
         save,
     )
 
@@ -125,19 +140,26 @@ def clustering_individual(
 
     # Produce the kMean clustering
     K = whiten(K)
-    centroids, _ = kmeans(K, k_eigen)
-    assignement, dist_ = vq(K, centroids)
-    assignement = assignement + 1
-    logging.info("Clustering finished")
+    centroids, dist = kmeans(K, k_eigen)
+    assignements, dist_ = vq(K, centroids)
+    dist = compute.compute_distance(centroids, K, assignements)
+    z_score = compute.compute_zscore(centroids, K, assignements)
+    assignements = assignements + 1
 
     # Export the results
-    results = pd.DataFrame(data={"index": wm_indices, "C": assignement})
+    results = pd.DataFrame(
+        data={"index": wm_indices, "C": assignements, "dist": dist, "z_score": z_score}
+    )
     if save:
         logging.info("Exporting the results...")
         results.to_csv(path_output_cluster, index=False)
+        logging.info("Clustering finished")
 
     # Convert the results to nifti
-    utils_nifti.compute_nift(path_nifti_in, path_output_cluster, path_nifti_out, save)
+    for value, path_out in zip(values_type, path_nifti_out):
+        utils_nifti.compute_nift(
+            path_nifti_in, path_output_cluster, path_out, value, save
+        )
 
 
 if __name__ == "__main__":

@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from scipy.cluster.vq import kmeans, vq, whiten
 
+import clustering.compute as compute
 import clustering.utils as utils
 import clustering.utils_nifti as nifti_utils
 
@@ -47,6 +48,14 @@ import clustering.utils_nifti as nifti_utils
     help="""Nifti space used""",
 )
 @click.option(
+    "-v",
+    "--value_type",
+    type=click.Choice(["cluster", "distance", "z_score"], case_sensitive=False),
+    required=False,
+    help="""Value to assign in the volume""",
+    multiple=True,
+)
+@click.option(
     "-s",
     "--save",
     type=bool,
@@ -55,11 +64,12 @@ import clustering.utils_nifti as nifti_utils
     help="""Saving the intermediate matrix (L, Lrw)""",
 )
 def clustering_population(
-    subject_ids: int,
+    subject_id: int,
     method: str = "comb",
     threshold: float = 2,
     k_eigen: int = 10,
     nifti_type: str = "nmi",
+    value_type: str = "cluster",
     save: bool = False,
 ):
     """Workflow to produce the spectral clustering at the population base
@@ -71,21 +81,27 @@ def clustering_population(
             save(bool):saving the intermediate matrix
     """
     # Define the general paths
-    subjects_id = list(subject_ids)
+    subjects_id = list(subject_id)
+    value_type = list(value_type)
     path_inputs_dir = []
     path_niftis_in = []
     in_dir = utils.get_output_dir()
-    work_id = f"/{datetime.today().strftime('%Y%m%d-%H%M')}_{k_eigen}_{threshold}"
+    work_id = f"/{datetime.today().strftime('%Y%m%d-%H%M')}_"
+    +f"{k_eigen}_{threshold}_{len(subject_id)}"
     path_logs = (
         f"{utils.create_output_folder(in_dir, subjects_id[0], 'population')}"
         + work_id
         + "_logs.txt"
     )
-    path_nifti_out = (
-        f"{utils.create_output_folder(in_dir,subjects_id[0],'population')}"
-        + work_id
-        + f"_{nifti_type}.nii.gz"
-    )
+    path_nifti_out = [
+        (
+            f"{utils.create_output_folder(in_dir,subjects_id[0],'population')}"
+            + work_id
+            + f"_{nifti_type}_{value}.nii.gz"
+        )
+        for value in value_type
+    ]
+
     path_output_cluster = (
         f"{utils.create_output_folder(in_dir,subjects_id[0],'population')}"
         + work_id
@@ -113,9 +129,10 @@ def clustering_population(
         threshold,
         k_eigen,
         nifti_type,
+        value_type,
         save,
     )
-
+    print(path_nifti_out)
     # load the data
     logging.info("Loading data...")
     Us = []
@@ -145,19 +162,24 @@ def clustering_population(
 
     # Produce the kMean clustering
     K = whiten(K)
-    centroids, _ = kmeans(K, k_eigen)
-    assignement, dist_ = vq(K, centroids)
-    assignement = assignement + 1
+    centroids, dist = kmeans(K, k_eigen)
+    assignements, dist_ = vq(K, centroids)
+    dist = compute.compute_distance(centroids, K, assignements)
+    z_score = compute.compute_zscore(centroids, K, assignements)
+    assignements = assignements + 1
 
     # Export the results
-    results = pd.DataFrame(data={"index": wm_indices, "C": assignement})
+    results = pd.DataFrame(
+        data={"index": wm_indices, "C": assignements, "dist": dist, "z_score": z_score}
+    )
     if save:
         logging.info("Exporting the results...")
         results.to_csv(path_output_cluster, index=False)
         logging.info("Clustering finished")
 
     # Convert the results to nifti
-    nifti_utils.compute_nift(path_mask, path_output_cluster, path_nifti_out, save)
+    for value, path_out in zip(value_type, path_nifti_out):
+        nifti_utils.compute_nift(path_mask, path_output_cluster, path_out, value, save)
 
 
 if __name__ == "__main__":

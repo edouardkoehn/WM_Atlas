@@ -10,7 +10,11 @@ from clustering import utils
 
 
 def compute_nift(
-    path_nifit_in: str, cluster_path: str, path_nifti_out: str, save: bool
+    path_nifit_in: str,
+    cluster_path: str,
+    path_nifti_out: str,
+    type="cluster",
+    save=False,
 ):
     """Method for converting the cluster into the nifti files
     Args:   path_nifti_in(str):path to the src nifti file
@@ -20,7 +24,7 @@ def compute_nift(
             path_nifti_in(str):path to the output nifti file
             indices_raw(np.array):np.array of the raw indices
     """
-    logging.info("Converting the cluster into nifti ...")
+    logging.info(f"Exporting the nifti using the data{type}")
     # load the nifti file
     h = nib.load(path_nifit_in)
     # nifti_values = (np.copy(h.get_fdata())).astype("int32")
@@ -36,13 +40,20 @@ def compute_nift(
     # load the cluster
     clusters = pd.read_csv(cluster_path)
     indices = clusters["index"]
+    # Chosse wich value to assign
+    if type == "cluster":
+        val = clusters.C
+    elif type == "distance":
+        val = clusters.dist
+    elif type == "z_score":
+        val = clusters.z_score
     # get the coordinate in x,y,z
     coord = np.zeros((indices.shape[0], 3), dtype=int)
     for i in range(0, len(coord)):
         coord[i] = np.unravel_index(indices[i], (v[0], v[1], v[2]), order="F")
     # Assigne the clusters
     for i in range(0, len(coord)):
-        nifti_values[coord[i, 0], coord[i, 1], coord[i, 2], :] = clusters.C[i]
+        nifti_values[coord[i, 0], coord[i, 1], coord[i, 2], :] = val[i]
     # export the results
     output = nib.Nifti1Image(nifti_values, None, header=hd)
     if save:
@@ -76,6 +87,7 @@ def export_nift(
     v = h.header["dim"][1:4]
     nifti_values = np.zeros((v[0], v[1], v[2], k))
     nifti_values[:] = np.nan
+    print(nifti_values.shape)
 
     # Get the coordinate in x,y,z
     coord = np.zeros((ind.shape[0], 3), dtype=int)
