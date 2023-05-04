@@ -64,7 +64,7 @@ import clustering.utils_nifti as nifti_utils
     help="""Saving the intermediate matrix (L, Lrw)""",
 )
 def clustering_population(
-    subject_id: int,
+    subject_ids: int,
     method: str = "comb",
     threshold: float = 2,
     k_eigen: int = 10,
@@ -81,13 +81,16 @@ def clustering_population(
             save(bool):saving the intermediate matrix
     """
     # Define the general paths
-    subjects_id = list(subject_id)
+    subjects_id = list(subject_ids)
     value_type = list(value_type)
+    print(value_type)
     path_inputs_dir = []
     path_niftis_in = []
     in_dir = utils.get_output_dir()
-    work_id = f"/{datetime.today().strftime('%Y%m%d-%H%M')}_"
-    +f"{k_eigen}_{threshold}_{len(subject_id)}"
+    work_id = (
+        f"/{datetime.today().strftime('%Y%m%d-%H%M')}_"
+        + f"{k_eigen}_{threshold}_{len(subjects_id)}"
+    )
     path_logs = (
         f"{utils.create_output_folder(in_dir, subjects_id[0], 'population')}"
         + work_id
