@@ -125,6 +125,9 @@ def create_output_folder(output_path: str, patient_id: int, type=str):
         path = output_path + "/" + f"{patient_id}"
     elif type == "population":
         path = output_path + "/population_cluster"
+    elif type == "boostrap":
+        path = path = output_path + "/population_cluster/Bootstrap"
+
     if not (os.path.isdir(path)):
         try:
             os.mkdir(path)

@@ -1,4 +1,5 @@
 import logging
+import os
 from datetime import datetime
 
 import click
@@ -41,6 +42,14 @@ import clustering.utils_nifti as nifti_utils
     help="""Number of computed eigen values""",
 )
 @click.option(
+    "-c",
+    "--clusters",
+    type=int,
+    required=False,
+    default=0,
+    help="""Number of clusters""",
+)
+@click.option(
     "-n",
     "--nifti_type",
     type=click.Choice(["reslice"], case_sensitive=False),
@@ -56,6 +65,14 @@ import clustering.utils_nifti as nifti_utils
     multiple=True,
 )
 @click.option(
+    "-b",
+    "--batch_number",
+    type=int,
+    required=False,
+    help=""""Batch number""",
+    default=0,
+)
+@click.option(
     "-s",
     "--save",
     type=bool,
@@ -63,14 +80,16 @@ import clustering.utils_nifti as nifti_utils
     default=False,
     help="""Saving the intermediate matrix (L, Lrw)""",
 )
-def clustering_population(
+def clustering_boostrap(
     subject_ids: int,
     method: str = "comb",
     threshold: float = 2,
     k_eigen: int = 10,
     nifti_type: str = "nmi",
     value_type: str = "cluster",
+    batch_number: int = 0,
     save: bool = False,
+    clusters: int = 0,
 ):
     """Workflow to produce the spectral clustering at the population base
     Args:   subject_id(int): coresponding patient id in the database,
@@ -81,6 +100,9 @@ def clustering_population(
             save(bool):saving the intermediate matrix
     """
     # Define the general paths
+    if clusters == 0:
+        clusters = k_eigen
+
     subjects_id = list(subject_ids)
     value_type = list(value_type)
     path_inputs_dir = []
@@ -88,16 +110,16 @@ def clustering_population(
     in_dir = utils.get_output_dir()
     work_id = (
         f"/{datetime.today().strftime('%Y%m%d-%H%M')}_"
-        + f"{k_eigen}_{threshold}_{len(subjects_id)}"
+        + f"{k_eigen}_{threshold}_{len(subjects_id)}_{clusters}_{batch_number}"
     )
     path_logs = (
-        f"{utils.create_output_folder(in_dir, subjects_id[0], 'population')}"
+        f"{utils.create_output_folder(in_dir, subjects_id[0], 'boostrap')}"
         + work_id
         + "_logs.txt"
     )
     path_nifti_out = [
         (
-            f"{utils.create_output_folder(in_dir,subjects_id[0],'population')}"
+            f"{utils.create_output_folder(in_dir,subjects_id[0],'boostrap')}"
             + work_id
             + f"_{nifti_type}_{value}.nii.gz"
         )
@@ -105,7 +127,7 @@ def clustering_population(
     ]
 
     path_output_cluster = (
-        f"{utils.create_output_folder(in_dir,subjects_id[0],'population')}"
+        f"{utils.create_output_folder(in_dir,subjects_id[0],'boostrap')}"
         + work_id
         + "_clusters.txt"
     )
@@ -163,7 +185,7 @@ def clustering_population(
 
     # Produce the kMean clustering
     K = whiten(K)
-    centroids, dist = kmeans(K, k_eigen)
+    centroids, dist = kmeans(K, clusters)
     assignements, dist_ = vq(K, centroids)
     dist = compute.compute_distance(centroids, K, assignements)
     z_score = compute.compute_zscore(centroids, K, assignements)
@@ -183,5 +205,83 @@ def clustering_population(
         nifti_utils.compute_nift(path_mask, path_output_cluster, path_out, value, save)
 
 
+def create_annotation_file():
+    """Method for creating the annotation files after computing all the boostrap"""
+    Boostrap_path = (
+        "/media/miplab-nas2/Data3/Hamid_Edouard/population_cluster/Bootstrap"
+    )
+    boostrap_list = os.listdir(Boostrap_path)
+    dates = []
+    n_patients = []
+    n_eigens = []
+    n_clusters = []
+    n_batchs = []
+    logs_paths = []
+    # Extract general information
+    for i in range(len(boostrap_list)):
+        if boostrap_list[i][-8:] == "logs.txt":
+            date, n_eigen, _, n_patient, n_cluster, n_batch, type = tuple(
+                boostrap_list[i].split("_")
+            )
+            dates.append(date)
+            n_patients.append(n_patient)
+            n_eigens.append(n_eigen)
+            n_clusters.append(n_cluster)
+            n_batchs.append(n_batch)
+            logs_paths.append(boostrap_list[i])
+
+    df_annotation = pd.DataFrame.from_dict(
+        {
+            "date": dates,
+            "n_patient": n_patients,
+            "n_eigen": n_eigens,
+            "n_cluster": n_clusters,
+            "batch": n_batchs,
+            "path_logs": logs_paths,
+        }
+    )
+
+    # Check if all the files have been produced
+    clusters_paths = []
+    nifti_cluster_paths = []
+    nifti_distance_paths = []
+    nifti_z_paths = []
+    for ind, data in df_annotation.iterrows():
+        gen_str = (
+            f"{data.date}_{data.n_eigen}_2.0_"
+            + f"{data.n_patient}_{data.n_cluster}_{data.batch}"
+        )
+        path_cluster = f"{Boostrap_path}/{gen_str}_clusters.txt"
+        path_nifit_cluster = f"{Boostrap_path}/{gen_str}_reslice_cluster.nii.gz"
+        path_nifit_dist = f"{Boostrap_path}/{gen_str}_reslice_distance.nii.gz"
+        path_nifit_z = f"{Boostrap_path}/{gen_str}_reslice_z_score.nii.gz"
+        if (
+            os.path.exists(path_cluster)
+            & os.path.exists(path_nifit_cluster)
+            & os.path.exists(path_nifit_dist)
+            & os.path.exists(path_nifit_z)
+        ):
+
+            clusters_paths.append(path_cluster)
+            nifti_cluster_paths.append(path_nifit_cluster)
+            nifti_distance_paths.append(path_nifit_dist)
+            nifti_z_paths.append(path_nifit_z)
+        else:
+            clusters_paths.append("None")
+            nifti_cluster_paths.append("None")
+            nifti_distance_paths.append("None")
+            nifti_z_paths.append("None")
+
+    df_annotation["path_cluster_txt"] = clusters_paths
+    df_annotation["path_nifti_cluster"] = nifti_cluster_paths
+    df_annotation["path_nifti_distance"] = nifti_distance_paths
+    df_annotation["path_nifti_z_score"] = nifti_z_paths
+
+    df_annotation = df_annotation.sort_values(["n_cluster", "batch"])
+    df_annotation = df_annotation.reset_index(drop=True)
+    df_annotation.to_csv(f"{Boostrap_path}/annotation.csv", index=False)
+    return
+
+
 if __name__ == "__main__":
-    clustering_population()
+    clustering_boostrap()

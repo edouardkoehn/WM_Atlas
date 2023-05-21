@@ -18,6 +18,7 @@ click = "^8.1.3"
 pandas = "^1.5.3"
 pygsp = "^0.5.1"
 nibabel = "^5.0.1"
+clusim = "^0.4"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
@@ -35,6 +36,7 @@ spectral_clustering = "clustering:spectral_clustering.spectral_clustering"
 extract_eigen= "clustering:extract_eigen.extract_eigen"
 clustering_pop= "clustering:clustering_population.clustering_population"
 clustering_ind= "clustering:clustering_individual.clustering_individual"
+clustering_boostrap= "clustering:clustering_boostrap.clustering_boostrap"
 
 [tool.commitizen]
 version = "0.2.1"
