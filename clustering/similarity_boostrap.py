@@ -24,7 +24,7 @@ annotation = pd.read_csv(PATH_ANNOTATION)
 annotation = annotation.sort_values(["n_cluster", "batch"]).reset_index(drop=True)
 
 # Extract the path information
-experiments = [2, 5]
+experiments = [4, 5, 8, 10, 12, 14, 20, 30]
 logging.info(f"Number of experiments: {len(experiments)}")
 logging.info(f"Experiment values: {experiments}")
 cluster_paths = []

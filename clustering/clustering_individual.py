@@ -18,11 +18,11 @@ import clustering.utils_nifti as utils_nifti
 @click.option(
     "-m",
     "--method",
-    type=click.Choice(["comb", "rw"], case_sensitive=False),
+    type=click.Choice(["comb", "rw", "sym"], case_sensitive=False),
     required=False,
     default="std",
     help="""Clustering method used (comb:Combinatorial(default),
-    rd:Random Walke version)""",
+    rd:Random Walk version, sym:Symetrical Laplacian)""",
 )
 @click.option(
     "-t",
@@ -82,60 +82,47 @@ def clustering_individual(
     """
     # Define the general paths
     values_type = list(value_type)
-    in_dir = utils.get_output_dir()
+    # in_dir = utils.get_output_dir()
+    path_output_dir = utils.create_output_folder(
+        utils.get_output_dir(), patient_id=subject_id, type="subject"
+    )
     work_id = (
         f"/{datetime.today().strftime('%Y%m%d-%H%M')}_{subject_id}_{threshold}"
         + f"_{k_eigen}"
     )
-    path_logs = (
-        f"{utils.create_output_folder(in_dir, subject_id, 'subject')}"
-        + work_id
-        + "_clustering_logs.txt"
-    )
+    path_logs = path_output_dir + work_id + "_clustering_logs.txt"
     path_nifti_out = [
-        (
-            f"{utils.create_output_folder(in_dir,subject_id,'subject')}"
-            + work_id
-            + f"_clusters_{nifti_type}_{value}.nii.gz"
-        )
+        (path_output_dir + work_id + f"_clusters_{nifti_type}_{value}.nii.gz")
         for value in value_type
     ]
 
-    path_output_cluster = (
-        f"{utils.create_output_folder(in_dir,subject_id,'subject')}"
-        + work_id
-        + "_clusters.txt"
-    )
-    if utils.check_output_folder:
-        path_input_dir = utils.create_output_folder(
-            utils.get_output_dir(), subject_id, "subject"
-        )
-    else:
-        print("Output folder not found : subject_id")
-    path_nifti_in = utils.check_nifti(path_input_dir, method, nifti_type, threshold)
+    path_output_cluster = path_output_dir + work_id + "_clusters.txt"
+    path_nifti_in = utils.get_nifti_path(subject_id, method, nifti_type, threshold)
 
     utils.create_logs(
-        path_logs,
-        subject_id,
-        datetime.today().strftime("%Y%m%d_%H:%M"),
-        method,
-        threshold,
-        k_eigen,
-        nifti_type,
-        values_type,
-        save,
+        path_logs=path_logs,
+        patient_id=subject_id,
+        date=datetime.today().strftime("%Y%m%d_%H:%M"),
+        method=method,
+        threshold=threshold,
+        k_eigen=k_eigen,
+        nifti=nifti_type,
+        value_type=[],
+        save=save,
     )
 
     # Load the data
     wm_indices = []
     U, wm_indices = utils_nifti.extract_eigen_from_nifti(
-        path_nifti_in, wm_indices, "individual"
+        path_nifti_in, wm_indices, "individual", k_eigen=100
     )
+    v = utils.load_npy(utils.get_v_path(subject_id, method, threshold))
 
     # Produce the clustering matrix
-    K = np.zeros((len(U), k_eigen))
+    const_ind, fiedler_ind = compute.fiedler_vector(v)
+    K = np.zeros((len(U), k_eigen + 1))
     for voxel in range(0, U.shape[0]):
-        K[voxel, 0:k_eigen] = U[voxel, 0:k_eigen]
+        K[voxel, 0:k_eigen] = U[voxel, const_ind : (const_ind + k_eigen)]
     logging.info(f"Clustering matrix shape : {K.shape}")
 
     # Produce the kMean clustering

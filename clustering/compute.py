@@ -39,7 +39,6 @@ def compute_fully_connected(A: sparse, ind: np.array) -> tuple[sparse, np.array]
             to the volume
     """
     n_connections, labels = sparse.csgraph.connected_components(A, directed=False)
-
     if n_connections != 1:
         masks = []
         for n in range(0, n_connections):
@@ -51,19 +50,17 @@ def compute_fully_connected(A: sparse, ind: np.array) -> tuple[sparse, np.array]
         A_fully = A[mask, :]
         A_fully = A_fully[:, mask]
         ind_fully = ind[mask]
-
     else:
         A_fully = A
         ind_fully = ind
-
     logging.info(f"A_wm fully connected, shape:{A_fully.shape}")
     return A_fully, ind_fully
 
 
 def compute_A_wm(A: sparse, patient_id: int) -> tuple[sparse, np.array]:
-    """Return the Adjecent Matrix containing only the wm nodes
+    """Return the Adjacent Matrix containing only the wm nodes
     Args:   A(np.sparse): Sparse raw adjacent matrix
-            patient_id(int)
+            patient_id(int): subject id
 
 
     Returns     A_wm(np.array)
@@ -79,17 +76,17 @@ def compute_A_wm(A: sparse, patient_id: int) -> tuple[sparse, np.array]:
 def compute_binary_matrix(
     A: sparse, thresold: float, ind: np.array
 ) -> tuple[sparse, np.array]:
-    """Methdo for producing a binary adjacent matrix
+    """Method for producing a binary adjacent matrix
     Args:   A(np.sparse): Sparse raw adjacent matrix
-            threshold(float): threshold values
+            threshold(float): threshold value
             ind(np.array):: np.array of the corresponding indices
             of the matrix to the volume
-
 
     Returns     A(np.sparse)
                 ind(np.array)
     """
     A.data = np.where(A.data < thresold, 0, 1)
+    logging.info(f"A binarised:{A.shape}")
     return A, ind
 
 
@@ -98,7 +95,6 @@ def compute_D(A: sparse, ind: np.array) -> tuple[sparse, np.array]:
     Args:   A(np.sparse): Sparse raw adjacent matrix
             ind(np.array):: np.array of the corresponding indices
             of the matrix to the volume
-
 
     Returns     D(np.array)
                 ind(np.array)
@@ -112,7 +108,7 @@ def compute_L(
 ) -> tuple[sparse, np.array]:
     """Compute the combinatorial Laplacien
     Args:   A(np.sparse): Sparse raw adjacent matrix
-            ind(np.arry):: np.array of the corresponding indices of
+            ind(np.array):: np.array of the corresponding indices of
             the matrix to the volume
             path(str): path for saving the matrix
             save(bool):boolean for specified to save the matrix
@@ -126,6 +122,26 @@ def compute_L(
         sparse.save_npz(path_matrix + "_L.npz", L)
     logging.info(f"L shape:{L.shape}")
     return L, ind
+
+
+def compute_Lsym(
+    A: sparse, ind: np.array, path_matrix: str, save: bool
+) -> tuple[sparse, np.array]:
+    """Compute the symetric Laplacien
+    Args:   A(np.sparse): Sparse raw adjacent matrix
+            ind(np.array):: np.array of the corresponding indices of
+            the matrix to the volume
+            path(str): path for saving the matrix
+            save(bool):boolean for specified to save the matrix
+
+    Returns:    L_sym(np.sparse)
+                ind(np.array)
+    """
+    L_sym = sparse.csgraph.laplacian(A, normed=True)
+    if save:
+        sparse.save_npz(path_matrix + "_Lsym.npz", L_sym)
+    logging.info(f"Lsym shape:{L_sym.shape}")
+    return L_sym, ind
 
 
 def compute_Lrw(
@@ -144,9 +160,8 @@ def compute_Lrw(
     logging.info("Starting to compute Lrw:")
     D_inv, _ = compute_D(A, ind)
     D_inv = sparse.linalg.inv(D_inv)
-    logging.info(f"Finished to compute Lrw: {D_inv.shape, type(D_inv)}")
     L, _ = compute_L(A, ind, path_matrix, False)
-    Lrw = D_inv * L
+    Lrw = D_inv.dot(L)
     if save:
         sparse.save_npz(path_matrix + "_Lrw.npz", Lrw)
     logging.info(f"Lrw shape:{Lrw.shape}")
@@ -173,9 +188,7 @@ def compute_eigenvalues(
     eig_values, eigen_vector = sparse.linalg.eigsh(
         L,
         k=k,
-        tol=1e-1,
         which="SA",
-        v0=np.ones(L.shape[0]) * 0.01,
         return_eigenvectors=True,
     )
 
@@ -186,35 +199,9 @@ def compute_eigenvalues(
     return eig_values, eigen_vector, ind
 
 
-def is_connected(A: sparse) -> bool:
-    """Check if the Sparse matrix is fully connected
-    Args:   A(np.sparse): Sparse raw adjacent matrix
-
-    return  True if fully connected
-    """
-    n_connected, label = sparse.csgraph.connected_components(A, directed=False)
-    if n_connected == 1:
-        return True
-    else:
-        return False
-
-
-def is_symetric(A: sparse) -> bool:
-    """Method for checking if a matrix if symetrix
-    Args:   A(np.sparse): Sparse matrix to check
-
-    retun   True if symetric
-    """
-    A_sym = sk.validation.check_symmetric(A)
-    if np.sum(A_sym != A) == 0:
-        return True
-    else:
-        return False
-
-
 def compute_sym_eigen_from_rw_eigen(U_rw: np.array, D: np.array):
-    D_root = np.sqrt(D).todense()
-    U_sym = np.dot(D_root, U_rw)
+    D_root = D.sqrt()
+    U_sym = D_root.dot(U_rw)
     return U_sym
 
 
@@ -255,23 +242,6 @@ def compute_zscore(centroids: np.array, features: np.array, assignements: np.arr
         z_score[i] = (dist[i] - cluster_val[0]) / cluster_val[1]
 
     return z_score
-
-
-def jaccard_similarity(list1, list2):
-    """
-    Calculates the Jaccard similarity between two lists.
-
-    Parameters:
-    list1 (list): The first list to compare.
-    list2 (list): The second list to compare.
-    if equal to one --> both ensmble as equal
-    Returns:
-    float: The Jaccard similarity between the two lists.
-    """
-    # Convert the lists to sets for easier comparison
-    s1 = set(list1)
-    s2 = set(list2)
-    return float(len(s1.intersection(s2)) / len(s1.union(s2)))
 
 
 def compute_element_centric(
@@ -385,3 +355,54 @@ def compute_simlarity(experiments_list: list, metric: str = "MNI"):
                 )
                 distance_matrix[line, row] = distance_matrix[row, line]
     return distance_matrix
+
+
+def is_connected(A: sparse) -> bool:
+    """Check if the Sparse matrix is fully connected
+    Args:   A(np.sparse): Sparse raw adjacent matrix
+
+    return  True if fully connected
+    """
+    n_connected, label = sparse.csgraph.connected_components(A, directed=False)
+    if n_connected == 1:
+        return True
+    else:
+        return False
+
+
+def is_symetric(A: sparse) -> bool:
+    """Method for checking if a matrix if symetrix
+    Args:   A(np.sparse): Sparse matrix to check
+
+    retun   True if symetric
+    """
+    A_sym = sk.validation.check_symmetric(A)
+    if np.sum(A_sym != A) == 0:
+        return True
+    else:
+        return False
+
+
+def fiedler_vector(v: list):
+    """Method for finding the fielder vector and return the fielder indices and the
+    constant vector that is right before the fiedler vector
+    The fielder is the first eigen value that is greater than e-5"""
+    idx = (np.where(v > 1e-5))[0][0]
+    return idx, idx + 1
+
+
+def jaccard_similarity(list1, list2):
+    """
+    Calculates the Jaccard similarity between two lists.
+
+    Parameters:
+    list1 (list): The first list to compare.
+    list2 (list): The second list to compare.
+    if equal to one --> both ensmble as equal
+    Returns:
+    float: The Jaccard similarity between the two lists.
+    """
+    # Convert the lists to sets for easier comparison
+    s1 = set(list1)
+    s2 = set(list2)
+    return float(len(s1.intersection(s2)) / len(s1.union(s2)))

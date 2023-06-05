@@ -1,7 +1,6 @@
 from datetime import datetime
 
 import click
-import numpy as np
 
 import clustering.compute as compute
 import clustering.utils as utils
@@ -13,11 +12,11 @@ import clustering.utils_nifti as utils_nifti
 @click.option(
     "-m",
     "--method",
-    type=click.Choice(["comb", "rw"], case_sensitive=False),
+    type=click.Choice(["comb", "rw", "sym"], case_sensitive=False),
     required=False,
-    default="acpc",
+    default="comb",
     help="""Clustering method used (comb:Combinatorial(default),
-    rd:Random Walk version)""",
+    rd:Random Walk version, sym:Symetrical laplacian)""",
 )
 @click.option(
     "-t",
@@ -49,7 +48,7 @@ import clustering.utils_nifti as utils_nifti
     type=bool,
     required=False,
     default=False,
-    help="""Saving the intermediate matrix (L, Lrw)""",
+    help="""Saving the intermediate matrix (L,U,v)""",
 )
 def extract_eigen(
     subject_id: int,
@@ -59,11 +58,10 @@ def extract_eigen(
     nifti_type: str = "acpc",
     save: bool = False,
 ):
-    """Workflow to extract the eigenvalues of subject's graph and to save the
-    eigen values in a specific eigen space.
+    """Workflow to extract the eigenvalues of the laplacien of a subject's graph
     Args:   subject_id(int): coresponding patient id in the database,
-            method(str): method used for computing the laplacien either combinatorial or
-            randomwalk laplacian,
+            method(str): method used for computing the laplacien either combinatorial
+            (comb),randomwalk laplacian (rw) or symetric laplacian (sym)
             threshold(float): thresholding value for the binarisation of the matrix
             k_eigen(int):number of eigen value used
             nitfi_type(str): Which nifti you want to produce, if "mni" the workflow,
@@ -72,11 +70,11 @@ def extract_eigen(
     """
     # Define the general paths
     path_output_dir = utils.create_output_folder(
-        utils.get_output_dir(), subject_id, "subject"
+        utils.get_output_dir(), patient_id=subject_id, type="subject"
     )
     work_id = f"/{datetime.today().strftime('%Y%m%d-%H%M')}_{subject_id}_{threshold}"
     path_logs = path_output_dir + work_id + "_extraction_logs.txt"
-    path_nifti_in = utils.load_data(subject_id)["G"]["f"]["mask"]
+    path_nifti_in = utils.get_src_nifti(subject_id)
     path_nifti_out = path_output_dir + work_id + "_extraction_acpc.nii.gz"
     path_nifti_original_acpc_out = path_output_dir + work_id + "_original_acpc.nii"
     path_matrix = path_output_dir + work_id
@@ -91,14 +89,15 @@ def extract_eigen(
         mask = utils.get_mask_path("95")
 
     utils.create_logs(
-        path_logs,
-        subject_id,
-        datetime.today().strftime("%Y%m%d_%H:%M"),
-        method,
-        threshold,
-        k_eigen,
-        nifti_type,
-        save,
+        path_logs=path_logs,
+        patient_id=subject_id,
+        date=datetime.today().strftime("%Y%m%d_%H:%M"),
+        method=method,
+        threshold=threshold,
+        k_eigen=k_eigen,
+        nifti=nifti_type,
+        value_type=[],
+        save=save,
     )
     # load the data
     A = utils.get_A(subject_id)
@@ -110,17 +109,18 @@ def extract_eigen(
         A_wm, ind = compute.compute_binary_matrix(A_wm, threshold, ind)
 
     A_wm, ind = compute.compute_fully_connected(A_wm, ind)
-    # A_wm=A_wm[0:100,0:100]
-    # ind=ind[0:100]
+
     # Compute all the required matrix
     if method == "comb":
         L, ind = compute.compute_L(A_wm, ind, path_matrix, save)
     if method == "rw":
         L, ind = compute.compute_Lrw(A_wm, ind, path_matrix, save)
+    if method == "sym":
+        L, ind = compute.compute_Lsym(A_wm, ind, path_matrix, save)
 
     # Compute the eigen vector
     v, U, ind = compute.compute_eigenvalues(L, k_eigen, ind, path_matrix, save)
-    v = np.abs(v)
+
     # Export the results
     utils_nifti.export_nift(path_nifti_in, U, ind, k_eigen, path_nifti_out, save)
 

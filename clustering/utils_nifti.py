@@ -87,7 +87,6 @@ def export_nift(
     v = h.header["dim"][1:4]
     nifti_values = np.zeros((v[0], v[1], v[2], k))
     nifti_values[:] = np.nan
-    print(nifti_values.shape)
 
     # Get the coordinate in x,y,z
     coord = np.zeros((ind.shape[0], 3), dtype=int)
@@ -113,13 +112,15 @@ def copy_nifti(path_nifti_in: str, path_nifti_original_acpc_out: str, type: str,
     return
 
 
-def extract_eigen_from_nifti(nifti_path: str, indices: np.array, type: str):
+def extract_eigen_from_nifti(
+    nifti_path: str, indices: np.array, type: str, k_eigen: int = 100
+):
     """Extract the values of the nifti file, with the wm mask(flatten list of wm_ind)"""
     h = nib.load(nifti_path)
     data_3d = np.copy(h.get_fdata())
     data = np.reshape(
         data_3d,
-        (data_3d.shape[0] * data_3d.shape[1] * data_3d.shape[2], 100),
+        (data_3d.shape[0] * data_3d.shape[1] * data_3d.shape[2], k_eigen),
         order="F",
     )
 

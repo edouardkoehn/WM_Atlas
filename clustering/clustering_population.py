@@ -18,7 +18,7 @@ import clustering.utils_nifti as nifti_utils
 @click.option(
     "-m",
     "--method",
-    type=click.Choice(["comb", "rw"], case_sensitive=False),
+    type=click.Choice(["comb", "rw", "sym"], case_sensitive=False),
     required=False,
     default="std",
     help="""Clustering method used (comb:Combinatorial(default),
@@ -119,8 +119,8 @@ def clustering_population(
         else:
             print("Output folder not found : subject_id")
 
-    for output, id in zip(path_inputs_dir, subjects_id):
-        path_niftis_in.append(utils.check_nifti(output, method, nifti_type, threshold))
+    for id in subjects_id:
+        path_niftis_in.append(utils.get_nifti_path(id, method, nifti_type, threshold))
         work_id = f"/{datetime.today().strftime('%Y%m%d-%H%M')}_{id}_{threshold}"
 
     utils.create_logs(
@@ -142,7 +142,7 @@ def clustering_population(
 
     for nifti in path_niftis_in:
         U, wm_indices = nifti_utils.extract_eigen_from_nifti(
-            nifti, wm_indices, "population"
+            nifti, wm_indices, "population", k_eigen=100
         )
         Us.append(U)
 
@@ -150,10 +150,14 @@ def clustering_population(
     K = np.zeros((len(wm_indices), k_eigen * len(subjects_id)))
     for id in range(0, len(subjects_id)):
         U_subject = Us[id]
+        v = utils.load_npy(utils.get_v_path(subjects_id[id], method, threshold))
+        const_ind, fiedler_ind = compute.fiedler_vector(v)
         for voxel in range(0, U_subject.shape[0]):
             start_col = id * k_eigen
             end_col = start_col + k_eigen
-            K[voxel, start_col:end_col] = U_subject[voxel, 0:k_eigen]
+            K[voxel, start_col:end_col] = U_subject[
+                voxel, const_ind : (const_ind + k_eigen)
+            ]
 
     # Clean the clustering matrix
     nan_indices = np.where(np.isnan(K))[0]
