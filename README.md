@@ -66,8 +66,8 @@ This workflow extract the eigenmodes of one specific subject. It has a command l
 /Code/MVetterli/WM_Atlas$ extract_eigen --help
 ```
 It would display the following informations:
-```bash
 
+```bash
  Workflow to extract the eigenvalues of the laplacien of a subject's graph
 
   Args: subject_id(int): coresponding patient id in the database,
@@ -96,11 +96,12 @@ Options:
 ```
 Once the pipeline is finished the data would be save in the ouput folder specified in the ```/clustering/config.yml``` file.
 ### Clustering individual
-This workflow produce a clustering on a unique subject.t has a command line interface. You can get information on the argument of this worklfow using :
+This workflow produce a clustering on a unique subject.It has a command line interface. You can get information on the argument of this worklfow using :
 ```bash
 /Code/MVetterli/WM_Atlas$  clustering_ind --help --help
 ```
 It would display the following informations:
+
 ```bash
 
  Workflow to produce the spectral clustering for a specific individual
@@ -132,6 +133,79 @@ Options:
   -s, --save BOOLEAN              Saving the intermediate matrix (L, Lrw)
   --help                          Show this message and exit.
 ```
+
 Once the pipeline is finished the data would be save in the ouput folder specified in the ```/clustering/config.yml``` file.
 ### Clustering population
+This workflow produce a the boostrap experiment. It has a command line interface. You can get information on the argument of this worklfow using :
+```bash
+/Code/MVetterli/WM_Atlas$  clustering_boostrap --help --help
+```
+It would display the following informations:
+
+```bash
+  Workflow to produce the spectral clustering at the population level
+
+  Args: subject_id(int): coresponding patient id in the database,
+
+        method(str): method used for computing the laplacien
+
+        threshold(float): thresholding value for the binarisation of the matrix
+
+        k_eigen(int):number of eigen value used
+
+        nifti_type:from which nifti the clustering would be produced
+
+        save(bool):saving the intermediate matrix
+
+Options:
+  -i, --subject_ids INTEGER       Patient id  [required]
+  -m, --method [comb|rw|sym]      Clustering method used
+                                  (comb:Combinatorial(default), rd:Random
+                                  Walke version)
+  -t, --threshold FLOAT           Thresholding values for the binarisation of
+                                  A. If not specified, no thresholding would
+                                  be applied
+  -k, --k_eigen INTEGER           Number of computed eigen values  [required]
+  -n, --nifti_type [reslice]      Nifti space used  [required]
+  -v, --value_type [cluster|distance|z_score]
+                                  Value to assign in the volume
+  -s, --save BOOLEAN              Saving the intermediate matrix (L, Lrw)
+  --help                          Show this message and exit.
+```
+
+Once the pipeline is finished the data would be save in the ouput folder specified in the ```/clustering/config.yml``` file.
 ### Clustering Boostrap
+This workflow extract the eigenmodes of one specific subject. It has a command line interface. You can get information on the argument of this worklfow using :
+```bash
+/Code/MVetterli/WM_Atlas$ extract_eigen --help
+```
+It would display the following informations:
+
+```bash
+ Workflow to produce the spectral clustering at the population base
+ Args:
+  subject_id(int): coresponding patient id in the database,
+  method(str): method used for computing the laplacien,
+  threshold(float): thresholding value for the binarisation of the matrix
+  k_eigen(int):number of eigen value used
+  nifti_type:from which nifti the clustering would be produced
+  save(bool):saving the intermediate matrix
+
+Options:
+  -i, --subject_ids INTEGER       Patient id  [required]
+  -m, --method [comb|rw|sym]      Clustering method used
+                                  (comb:Combinatorial(default), rd:Random
+                                  Walke version)
+  -t, --threshold FLOAT           Thresholding values for the binarisation of
+                                  A. If not specified, no thresholding would
+                                  be applied
+  -k, --k_eigen INTEGER           Number of computed eigen values  [required]
+  -c, --clusters INTEGER          Number of clusters
+  -n, --nifti_type [reslice]      Nifti space used  [required]
+  -v, --value_type [cluster|distance|z_score]
+                                  Value to assign in the volume
+  -b, --batch_number INTEGER      "Batch number
+  -s, --save BOOLEAN              Saving the intermediate matrix (L, Lrw)
+  --help                          Show this message and exit.
+```
+Once the pipeline is finished the data would be save in the ouput folder specified in the ```/clustering/config.yml``` file.
