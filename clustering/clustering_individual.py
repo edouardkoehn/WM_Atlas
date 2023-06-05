@@ -72,7 +72,7 @@ def clustering_individual(
     value_type: str = "cluster",
     save: bool = False,
 ):
-    """Workflow to produce the spectral clustering at the population base
+    """Workflow to produce the spectral clustering for a specific individual
     Args:   subject_id(int): coresponding patient id in the database,
             method(str): method used for computing the laplacien,
             threshold(float): thresholding value for the binarisation of the matrix
