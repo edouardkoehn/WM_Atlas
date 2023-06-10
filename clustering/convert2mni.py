@@ -1,6 +1,7 @@
 import clustering.utils as utils
 import clustering.utils_nifti as utils_nifti
 
+# Simple script to convert the extraction results from the ACPC space to the MNI space
 # load the
 ids = [
     101915,

@@ -5,6 +5,7 @@ import pandas as pd
 
 from clustering import compute
 
+# Script for computing the similarity between the clustering from a boostrap
 # Define general path
 GENERAL_PATH = "/media/miplab-nas2/Data3/Hamid_Edouard/population_cluster/Bootstrap"
 PATH_ANNOTATION = GENERAL_PATH + "/annotation.csv"

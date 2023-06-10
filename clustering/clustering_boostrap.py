@@ -281,7 +281,7 @@ def create_annotation_file():
     df_annotation["path_nifti_distance"] = nifti_distance_paths
     df_annotation["path_nifti_z_score"] = nifti_z_paths
 
-    df_annotation = df_annotation.sort_values(["n_cluster", "batch"])
+    df_annotation = df_annotation.sort_values(["n_patient", "n_cluster", "batch"])
     df_annotation = df_annotation.reset_index(drop=True)
     df_annotation.to_csv(f"{Boostrap_path}/annotation.csv", index=False)
     return
